@@ -1,0 +1,113 @@
+LARKFIELD SYSTEMS EMPLOYEE HANDBOOK
+Document 7 of 8: IT Security and Acceptable Use
+Revision 4.2 - Effective 1 January 2026
+
+NOTICE: Larkfield Systems is a fictional company. This handbook is synthetic
+material written for testing the OnboardAI assistant. It contains no real
+employee, company or customer data, and nothing in it is legal advice.
+
+-------------------------------------------------------------------------------
+7.1 SCOPE
+
+This document applies to every device and account used for Larkfield Systems
+work, whether the company owns it or you do.
+
+-------------------------------------------------------------------------------
+7.2 ACCOUNTS AND PASSWORDS
+
+Multi-factor authentication is required on every company account. No exceptions
+are granted.
+
+Passwords must be at least 14 characters. The company password manager is
+provided to every employee and must be used for work credentials; storing work
+passwords in a browser or a personal note is not permitted.
+
+Passwords are not rotated on a schedule. They are changed only when there is
+reason to believe one has been exposed.
+
+Never share a password or an authentication code, including with IT. No member
+of IT staff will ever ask you for one.
+
+-------------------------------------------------------------------------------
+7.3 DEVICES
+
+Company laptops are encrypted at rest before they are issued, and the screen
+lock is set to engage after 10 minutes of inactivity. Neither setting may be
+turned off.
+
+Laptops are replaced every three years, or sooner if the hardware fails.
+
+Install software from the company application catalogue. Anything not in the
+catalogue needs IT approval before installation.
+
+Report a lost or stolen device to IT immediately, at any hour, so that it can
+be wiped remotely.
+
+-------------------------------------------------------------------------------
+7.4 HOW WE CLASSIFY INFORMATION
+
+Every piece of company information falls into one of four levels:
+
+  Public         Approved for release outside the company. Marketing material,
+                 published documentation.
+
+  Internal       Shared freely inside the company, not outside it. Team plans,
+                 internal announcements, this handbook.
+
+  Confidential   Limited to those who need it. Customer data, contracts,
+                 unreleased product plans, salary bands for individuals.
+
+  Restricted     Limited to named individuals. Authentication secrets,
+                 encryption keys, security incident detail, employee medical
+                 and personnel records.
+
+Confidential and Restricted information may not be copied to personal email,
+personal cloud storage or personal devices.
+
+When you are unsure of the level, treat the information as Confidential and
+ask the owner.
+
+-------------------------------------------------------------------------------
+7.5 ACCEPTABLE USE
+
+Limited personal use of company devices is permitted provided it does not
+interfere with your work, consume significant resources, or involve anything
+unlawful or offensive.
+
+Company systems may not be used to run a personal business, to mine
+cryptocurrency, or to store personal media libraries.
+
+Larkfield Systems may access company systems and the data on them when there is
+a legitimate business or legal reason. You should not expect privacy in
+material stored on company systems.
+
+-------------------------------------------------------------------------------
+7.6 EXTERNAL SERVICES AND ARTIFICIAL INTELLIGENCE TOOLS
+
+Using a new external service to process company information requires a security
+review by the Security team before any data is sent to it. Allow 10 business
+days.
+
+Confidential and Restricted information may not be entered into any external
+artificial intelligence tool that has not completed that review.
+
+-------------------------------------------------------------------------------
+7.7 REPORTING A SECURITY INCIDENT
+
+Report a suspected security incident within one hour of noticing it, to
+security@larkfieldsystems.example or through the IT service desk. A suspected
+incident includes a lost device, a clicked phishing link, an unexpected
+password prompt, or information sent to the wrong recipient.
+
+Reporting quickly is always the right call. No employee has ever been
+disciplined at Larkfield Systems for reporting an incident promptly and
+honestly, including one they caused themselves.
+
+-------------------------------------------------------------------------------
+7.8 SECURITY TRAINING
+
+All employees complete security awareness training within the first 14 days of
+employment and once every year after that.
+
+Simulated phishing exercises are run quarterly. Failing one results in a short
+refresher module, not a disciplinary measure.
