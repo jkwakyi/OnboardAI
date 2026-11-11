@@ -122,13 +122,17 @@ See `CONTRIBUTING.md` for the full version. In short:
 
 ## Tickets that need Jared
 
-- **ON-10 — Embedding API provider and key.** Ask Jared which provider to
-  use. He puts the key in his own local `.env`. **Never ask him to paste a
-  key into chat.**
+- **ON-10 — Embedding API provider and key.** *Decided 11 November 2026:*
+  hosted, OpenAI `text-embedding-3-small`, 1536 dimensions. Jared puts the
+  key in his own local `.env`. **Never ask him to paste a key into chat.**
+  Changing provider or model is his call, not a refactor.
 - **ON-18 — real local LLM.** Ask which models he has downloaded and what
   hardware he has, agree the selection criteria with him, then select. Keep
   the Mock LLM selectable by configuration so CI and teammates without the
-  model can still run the system.
+  model can still run the system. *Known 11 November 2026:* Ollama 0.32.5
+  with eight models (including `qwen3:8b`, `gemma4:12b`, `mistral:7b`) on an
+  RTX 5070 with 12 GB VRAM — but the install is broken, `llama-server.exe`
+  is missing, so nothing runs until it is reinstalled.
 
 ## UI (epic ON-62)
 
