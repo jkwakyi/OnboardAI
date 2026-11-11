@@ -1,0 +1,282 @@
+{
+  "version": 1,
+  "handbook_revision": "4.2",
+  "description": "Evaluation question set for OnboardAI (ON-23). Thirty questions about the synthetic Larkfield Systems handbook in data/handbook. Twenty are answerable from the corpus and carry their expected answer and the section that answers it. Ten are unanswerable and must produce the HR fallback rather than an invented policy; each names the deliberate gap in the corpus it relies on.",
+  "counts": {
+    "total": 30,
+    "answerable": 20,
+    "unanswerable": 10
+  },
+  "questions": [
+    {
+      "id": "EVAL-01",
+      "question": "When did the Portland office open?",
+      "answerable": true,
+      "expected_fallback": false,
+      "expected_answer": "2019.",
+      "source_document": "01-welcome-and-company-overview.txt",
+      "source_section": "1.2",
+      "supporting_text": "second office in Portland, Oregon, which opened in 2019"
+    },
+    {
+      "id": "EVAL-02",
+      "question": "When does the fiscal year run?",
+      "answerable": true,
+      "expected_fallback": false,
+      "expected_answer": "From 1 February to 31 January.",
+      "source_document": "01-welcome-and-company-overview.txt",
+      "source_section": "1.5",
+      "supporting_text": "Our fiscal year runs from 1 February to 31 January."
+    },
+    {
+      "id": "EVAL-03",
+      "question": "How long is the introductory period for a new employee?",
+      "answerable": true,
+      "expected_fallback": false,
+      "expected_answer": "90 calendar days from the start date.",
+      "source_document": "02-employment-policies.txt",
+      "source_section": "2.2",
+      "supporting_text": "an introductory period of 90 calendar days"
+    },
+    {
+      "id": "EVAL-04",
+      "question": "What are the core hours?",
+      "answerable": true,
+      "expected_fallback": false,
+      "expected_answer": "10:00 to 16:00 Eastern Time.",
+      "source_document": "02-employment-policies.txt",
+      "source_section": "2.3",
+      "supporting_text": "Core hours are 10:00 to 16:00 Eastern Time."
+    },
+    {
+      "id": "EVAL-05",
+      "question": "How often are employees paid?",
+      "answerable": true,
+      "expected_fallback": false,
+      "expected_answer": "Semi-monthly, on the 15th of the month and on the last business day of the month.",
+      "source_document": "03-compensation-and-payroll.txt",
+      "source_section": "3.1",
+      "supporting_text": "paid semi-monthly, on the 15th of the month"
+    },
+    {
+      "id": "EVAL-06",
+      "question": "How much is the employee referral bonus?",
+      "answerable": true,
+      "expected_fallback": false,
+      "expected_answer": "2,000 US dollars.",
+      "source_document": "03-compensation-and-payroll.txt",
+      "source_section": "3.4",
+      "supporting_text": "bonus of 2,000 US dollars."
+    },
+    {
+      "id": "EVAL-07",
+      "question": "How many days of paid time off do I accrue in my fourth year?",
+      "answerable": true,
+      "expected_fallback": false,
+      "expected_answer": "20 days per year, the rate for years 3 to 5.",
+      "source_document": "04-time-off-and-leave.txt",
+      "source_section": "4.1",
+      "supporting_text": "Years 3 to 5 20 days per year"
+    },
+    {
+      "id": "EVAL-08",
+      "question": "How many paid company holidays are there each year?",
+      "answerable": true,
+      "expected_fallback": false,
+      "expected_answer": "11.",
+      "source_document": "04-time-off-and-leave.txt",
+      "source_section": "4.4",
+      "supporting_text": "observes 11 paid company holidays each year"
+    },
+    {
+      "id": "EVAL-09",
+      "question": "How much paid parental leave does a primary caregiver receive?",
+      "answerable": true,
+      "expected_fallback": false,
+      "expected_answer": "12 weeks at full pay.",
+      "source_document": "04-time-off-and-leave.txt",
+      "source_section": "4.5",
+      "supporting_text": "Primary caregiver 12 weeks at full pay"
+    },
+    {
+      "id": "EVAL-10",
+      "question": "What does the company match on the 401(k)?",
+      "answerable": true,
+      "expected_fallback": false,
+      "expected_answer": "Up to 4 per cent of base salary, vesting immediately.",
+      "source_document": "05-benefits-and-wellbeing.txt",
+      "source_section": "5.3",
+      "supporting_text": "contributions up to 4 per cent of base salary."
+    },
+    {
+      "id": "EVAL-11",
+      "question": "What is the monthly wellness stipend?",
+      "answerable": true,
+      "expected_fallback": false,
+      "expected_answer": "75 US dollars per month.",
+      "source_document": "05-benefits-and-wellbeing.txt",
+      "source_section": "5.4",
+      "supporting_text": "A wellness stipend of 75 US dollars per month"
+    },
+    {
+      "id": "EVAL-12",
+      "question": "How many counselling sessions does the Employee Assistance Programme cover?",
+      "answerable": true,
+      "expected_fallback": false,
+      "expected_answer": "Six per employee per calendar year.",
+      "source_document": "05-benefits-and-wellbeing.txt",
+      "source_section": "5.5",
+      "supporting_text": "provides six free counselling sessions"
+    },
+    {
+      "id": "EVAL-13",
+      "question": "What is the most a gift from a supplier may be worth for me to accept it?",
+      "answerable": true,
+      "expected_fallback": false,
+      "expected_answer": "100 US dollars or less.",
+      "source_document": "06-code-of-conduct.txt",
+      "source_section": "6.6",
+      "supporting_text": "value is 100 US dollars or less"
+    },
+    {
+      "id": "EVAL-14",
+      "question": "How quickly must I disclose a conflict of interest?",
+      "answerable": true,
+      "expected_fallback": false,
+      "expected_answer": "Within 10 business days of becoming aware of it.",
+      "source_document": "06-code-of-conduct.txt",
+      "source_section": "6.5",
+      "supporting_text": "within 10 business days of becoming aware of it"
+    },
+    {
+      "id": "EVAL-15",
+      "question": "What is the minimum password length?",
+      "answerable": true,
+      "expected_fallback": false,
+      "expected_answer": "14 characters.",
+      "source_document": "07-it-security-and-acceptable-use.txt",
+      "source_section": "7.2",
+      "supporting_text": "Passwords must be at least 14 characters."
+    },
+    {
+      "id": "EVAL-16",
+      "question": "What are the four data classification levels?",
+      "answerable": true,
+      "expected_fallback": false,
+      "expected_answer": "Public, Internal, Confidential and Restricted.",
+      "source_document": "07-it-security-and-acceptable-use.txt",
+      "source_section": "7.4",
+      "supporting_text": "falls into one of four levels"
+    },
+    {
+      "id": "EVAL-17",
+      "question": "How quickly must I report a suspected security incident?",
+      "answerable": true,
+      "expected_fallback": false,
+      "expected_answer": "Within one hour of noticing it.",
+      "source_document": "07-it-security-and-acceptable-use.txt",
+      "source_section": "7.7",
+      "supporting_text": "within one hour of noticing it"
+    },
+    {
+      "id": "EVAL-18",
+      "question": "When are performance reviews held?",
+      "answerable": true,
+      "expected_fallback": false,
+      "expected_answer": "Twice a year, in April and October.",
+      "source_document": "08-onboarding-training-and-performance.txt",
+      "source_section": "8.5",
+      "supporting_text": "held twice a year, in April and October."
+    },
+    {
+      "id": "EVAL-19",
+      "question": "How long does a performance improvement plan run?",
+      "answerable": true,
+      "expected_fallback": false,
+      "expected_answer": "60 days, reviewed every two weeks.",
+      "source_document": "08-onboarding-training-and-performance.txt",
+      "source_section": "8.7",
+      "supporting_text": "A performance improvement plan runs for 60 days."
+    },
+    {
+      "id": "EVAL-20",
+      "question": "What is my annual professional development budget?",
+      "answerable": true,
+      "expected_fallback": false,
+      "expected_answer": "1,500 US dollars per fiscal year.",
+      "source_document": "08-onboarding-training-and-performance.txt",
+      "source_section": "8.8",
+      "supporting_text": "development budget of 1,500 US dollars"
+    },
+    {
+      "id": "EVAL-21",
+      "question": "Do I get stock options or equity as part of my package?",
+      "answerable": false,
+      "expected_fallback": true,
+      "gap": "stock options or equity"
+    },
+    {
+      "id": "EVAL-22",
+      "question": "How is the sales commission structure calculated?",
+      "answerable": false,
+      "expected_fallback": true,
+      "gap": "sales commission"
+    },
+    {
+      "id": "EVAL-23",
+      "question": "Am I paid while serving jury duty?",
+      "answerable": false,
+      "expected_fallback": true,
+      "gap": "jury duty"
+    },
+    {
+      "id": "EVAL-24",
+      "question": "What is the military leave policy for reservists?",
+      "answerable": false,
+      "expected_fallback": true,
+      "gap": "military leave"
+    },
+    {
+      "id": "EVAL-25",
+      "question": "Does the company pay relocation assistance if I move for the job?",
+      "answerable": false,
+      "expected_fallback": true,
+      "gap": "relocation assistance"
+    },
+    {
+      "id": "EVAL-26",
+      "question": "How much severance would I receive if my role were eliminated?",
+      "answerable": false,
+      "expected_fallback": true,
+      "gap": "severance"
+    },
+    {
+      "id": "EVAL-27",
+      "question": "Does Larkfield Systems sponsor work visas?",
+      "answerable": false,
+      "expected_fallback": true,
+      "gap": "visa sponsorship"
+    },
+    {
+      "id": "EVAL-28",
+      "question": "Is there a commuter benefit or a parking allowance at the offices?",
+      "answerable": false,
+      "expected_fallback": true,
+      "gap": "commuter benefits"
+    },
+    {
+      "id": "EVAL-29",
+      "question": "Can I take a sabbatical after five years of service?",
+      "answerable": false,
+      "expected_fallback": true,
+      "gap": "sabbatical"
+    },
+    {
+      "id": "EVAL-30",
+      "question": "Is there a childcare subsidy or backup care benefit?",
+      "answerable": false,
+      "expected_fallback": true,
+      "gap": "childcare subsidy"
+    }
+  ]
+}
