@@ -129,10 +129,19 @@ See `CONTRIBUTING.md` for the full version. In short:
 - **ON-18 — real local LLM.** Ask which models he has downloaded and what
   hardware he has, agree the selection criteria with him, then select. Keep
   the Mock LLM selectable by configuration so CI and teammates without the
-  model can still run the system. *Known 11 November 2026:* Ollama 0.32.5
-  with eight models (including `qwen3:8b`, `gemma4:12b`, `mistral:7b`) on an
-  RTX 5070 with 12 GB VRAM — but the install is broken, `llama-server.exe`
-  is missing, so nothing runs until it is reinstalled.
+  model can still run the system. *Known 11 November 2026:* Ollama **0.40.16**
+  on an RTX 5070 with **12 GB VRAM**, 64 GB RAM, i7-10700F. Eight models,
+  38 GB: `deepseek-r1:14b`, `gemma4:12b`, `qwen2.5vl:7b`, `minicpm-v:8b`,
+  `qwen3:8b`, `mistral:7b`, `llama3.2:latest`, `nomic-embed-text:latest`.
+  Verified working: `qwen3:8b` loads fully into VRAM and returns valid JSON
+  with citations under `"format":"json"`, which is what the LLM Gateway
+  needs. Avoid `deepseek-r1:14b` — a reasoning model whose thinking traces
+  fight strict JSON validation.
+
+  Ollama is served by an **NSSM service** (`C:\SentinelMesh\bin\nssm.exe`),
+  not Ollama's own, so stopping or reinstalling it needs elevation. It sets
+  `OLLAMA_HOST=0.0.0.0:11434`, `OLLAMA_KEEP_ALIVE=24h` and
+  `OLLAMA_MAX_LOADED_MODELS=2`.
 
 ## UI (epic ON-62)
 
