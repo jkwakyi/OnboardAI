@@ -1,0 +1,38 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Node
+node_modules/
+dist/
+*.local
+.vite/
+
+# Local data stores and uploads (never commit runtime data)
+backend/storage/
+chroma_data/
+postgres_data/
+
+# Model weights and local LLMs (never commit these)
+*.gguf
+*.safetensors
+*.bin
+models/
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
