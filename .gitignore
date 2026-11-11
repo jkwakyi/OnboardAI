@@ -36,3 +36,6 @@ models/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Development watcher runtime state (never committed)
+.watch/
