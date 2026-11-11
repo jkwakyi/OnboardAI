@@ -147,8 +147,30 @@ backend/
   tests/
 frontend/
   src/            React application
+data/
+  handbook/       the synthetic company handbook, as TXT and PDF
+scripts/          developer scripts
 docs/             architecture diagram and Interface Contracts
 ```
+
+## The synthetic company handbook
+
+[`data/handbook/`](data/handbook/) holds the approved HR document set the
+assistant answers from: eight documents for a fictional company, Larkfield
+Systems, in both TXT and PDF. No real employee, company or customer data is
+used anywhere in it.
+
+`txt/` is the source of truth and `pdf/` is generated from it. Edit the TXT,
+then regenerate:
+
+```bash
+python scripts/build_handbook_pdfs.py
+```
+
+The corpus deliberately leaves some subjects uncovered so the HR fallback path
+can be tested. [`data/handbook/README.md`](data/handbook/README.md) lists both
+the facts the evaluation questions rely on and the gaps, and the tests fail if
+either changes.
 
 ## Contributing
 
