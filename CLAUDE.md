@@ -137,6 +137,35 @@ then the pages. Original design only — use the token values in ON-63, no
 third-party template assets, no product branding. Pages talk to the backend
 only through the API client from ON-38.
 
+## The development watcher (standing rule)
+
+**All development is watchable.** Jared should never have to take "no output"
+on trust: there is always a live page showing what is happening.
+
+- Start the watcher at the beginning of a working session and leave it
+  running:
+
+  ```bash
+  python tools/watch/watch_server.py
+  ```
+
+  It serves <http://127.0.0.1:8777>.
+
+- Run tests, lint and other long commands **through** it, so their progress
+  and output reach the page:
+
+  ```bash
+  python tools/watch/run.py --label "backend pytest" --cwd backend -- pytest
+  ```
+
+  Output still streams to the terminal and the exit code still passes
+  through, so this costs nothing.
+
+- The page shows only live data. If something cannot be measured yet, the
+  page says so rather than showing a placeholder.
+
+`tools/watch/README.md` has the detail.
+
 ## Quality
 
 - Write tests with each ticket and run lint.
