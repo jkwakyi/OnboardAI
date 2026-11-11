@@ -138,10 +138,11 @@ See `CONTRIBUTING.md` for the full version. In short:
   needs. Avoid `deepseek-r1:14b` — a reasoning model whose thinking traces
   fight strict JSON validation.
 
-  Ollama is served by an **NSSM service** (`C:\SentinelMesh\bin\nssm.exe`),
-  not Ollama's own, so stopping or reinstalling it needs elevation. It sets
-  `OLLAMA_HOST=0.0.0.0:11434`, `OLLAMA_KEEP_ALIVE=24h` and
-  `OLLAMA_MAX_LOADED_MODELS=2`.
+  Ollama is served by an NSSM service belonging to SentinelMesh. **It is off
+  limits** — see [SentinelMesh is off limits](#sentinelmesh-is-off-limits-standing-rule).
+  Call the API at `http://127.0.0.1:11434` and nothing else. Do not stop,
+  start or reconfigure the service, and do not install over `ollama.exe`
+  while it is running.
 
 ## UI (epic ON-62)
 
@@ -149,6 +150,27 @@ Build in order: tokens (ON-63), shared components (ON-64), app shell (ON-65),
 then the pages. Original design only — use the token values in ON-63, no
 third-party template assets, no product branding. Pages talk to the backend
 only through the API client from ON-38.
+
+## SentinelMesh is off limits (standing rule)
+
+**Never touch anything connected to SentinelMesh.** `C:\SentinelMesh` is
+Jared's own infrastructure and has nothing to do with OnboardAI.
+
+This includes anything SentinelMesh owns or runs, not just files under that
+path:
+
+- the `Ollama` Windows service ("Ollama LLM Server"), which is
+  `C:\SentinelMesh\bin\nssm.exe` wrapping `ollama serve` — do not stop,
+  start, restart or reconfigure it
+- its processes, its logs, its registry keys
+- anything else that turns out to be launched from `C:\SentinelMesh`
+
+Reading a config to understand the machine is fine. Changing state is not.
+
+**If a task appears to need it, stop and ask Jared.** A task that starts as
+something else — repairing Ollama, freeing a port, installing a tool — is
+still off limits the moment SentinelMesh turns out to be underneath it. That
+is the point at which to stop, not to work around.
 
 ## The development watcher (standing rule)
 
