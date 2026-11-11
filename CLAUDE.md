@@ -164,7 +164,19 @@ on trust: there is always a live page showing what is happening.
 - The page shows only live data. If something cannot be measured yet, the
   page says so rather than showing a placeholder.
 
-`tools/watch/README.md` has the detail.
+- **Keep the Jira board panel fresh.** After moving a ticket, or whenever the
+  board changes, write a new snapshot so Jared can see the board without
+  leaving the page:
+
+  ```bash
+  python tools/watch/sync_board.py --from <jira-search-result.json>
+  ```
+
+  Pass the saved Atlassian MCP search result. The panel header shows how long
+  ago it synced, so a stale board is visible rather than misleading.
+
+`tools/watch/README.md` has the detail, including the optional live-polling
+mode for when the assistant is not running.
 
 ## Quality
 

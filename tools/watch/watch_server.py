@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import socket
 import subprocess
@@ -26,6 +27,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
+from jira import load_board, start_polling_if_configured
 from state import REPO_ROOT, read_events, read_output, read_state
 
 HOST = "127.0.0.1"
@@ -63,6 +65,37 @@ def _git(*args: str) -> str:
     return result.stdout.strip() if result.returncode == 0 else ""
 
 
+def _changed_files() -> list[str]:
+    """Paths of uncommitted changes, from `git status --porcelain`.
+
+    Parsed from unstripped output on purpose: a porcelain line is two status
+    characters then a space then the path, and an unstaged change leaves the
+    first character blank. Stripping the output would eat that leading space
+    on the first line only, losing a character from one filename.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "status", "--porcelain"],
+            cwd=str(REPO_ROOT),
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return []
+    if result.returncode != 0:
+        return []
+
+    paths = []
+    for line in result.stdout.splitlines():
+        match = re.match(r"^(..) (.+)$", line)
+        if match:
+            paths.append(match.group(2))
+    return paths
+
+
 def git_state() -> dict[str, Any]:
     """Branch, head commit, working tree cleanliness and remote position."""
     now = time.time()
@@ -70,7 +103,7 @@ def git_state() -> dict[str, Any]:
         return _git_cache["value"]
 
     branch = _git("rev-parse", "--abbrev-ref", "HEAD")
-    dirty_lines = [line for line in _git("status", "--porcelain").splitlines() if line.strip()]
+    dirty_files = _changed_files()
 
     ahead = behind = None
     tracking = _git("rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}")
@@ -87,8 +120,8 @@ def git_state() -> dict[str, Any]:
         "sha": _git("rev-parse", "--short", "HEAD"),
         "subject": _git("log", "-1", "--pretty=%s"),
         "committed": _git("log", "-1", "--pretty=%cr"),
-        "dirty": len(dirty_lines),
-        "dirty_files": [line[3:] for line in dirty_lines[:12]],
+        "dirty": len(dirty_files),
+        "dirty_files": dirty_files[:12],
         "tracking": tracking or None,
         "ahead": ahead,
         "behind": behind,
@@ -147,6 +180,7 @@ def build_state() -> dict[str, Any]:
         "git": git_state(),
         "services": services_state(),
         "repo": repo_state(),
+        "board": load_board(),
     }
 
 
@@ -182,6 +216,25 @@ class Handler(BaseHTTPRequestHandler):
         """Stay quiet; the page polls once a second."""
 
 
+def _load_dotenv() -> None:
+    """Read .env into the environment, without adding a dependency.
+
+    Only fills in names that are not already set, so a real environment
+    variable always wins over the file.
+    """
+    env_path = REPO_ROOT / ".env"
+    try:
+        lines = env_path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return
+    for line in lines:
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        name, _, value = line.partition("=")
+        os.environ.setdefault(name.strip(), value.strip().strip("\"'"))
+
+
 def _already_listening(port: int) -> bool:
     """True if something is already serving on this port.
 
@@ -208,8 +261,17 @@ def main() -> int:
         )
         return 1
 
+    _load_dotenv()
+    live = start_polling_if_configured()
+
     server = ThreadingHTTPServer((HOST, port), Handler)
     print(f"OnboardAI watcher on http://{HOST}:{port}  (Ctrl-C to stop)", flush=True)
+    print(
+        "Jira board: polling live"
+        if live
+        else "Jira board: agent-synced (set JIRA_EMAIL and JIRA_API_TOKEN in .env to poll live)",
+        flush=True,
+    )
     try:
         server.serve_forever()
     except KeyboardInterrupt:
