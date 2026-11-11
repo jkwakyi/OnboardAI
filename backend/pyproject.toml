@@ -18,6 +18,10 @@ dev = [
     "pytest>=8.3,<9",
     "httpx>=0.28,<0.29",
     "ruff>=0.8,<0.16",
+    # Generates the handbook PDFs from their TXT sources (ON-12).
+    "reportlab>=4.2,<5",
+    # Reads the generated PDFs back in the handbook tests.
+    "pypdf>=5.1,<7",
 ]
 
 [build-system]
@@ -40,4 +44,5 @@ testpaths = ["tests"]
 addopts = "-m 'not integration'"
 markers = [
     "integration: needs PostgreSQL and ChromaDB running (docker compose up -d)",
+    "handbook: checks the synthetic handbook corpus in data/handbook",
 ]

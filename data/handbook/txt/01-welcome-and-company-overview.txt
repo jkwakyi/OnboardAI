@@ -1,0 +1,80 @@
+LARKFIELD SYSTEMS EMPLOYEE HANDBOOK
+Document 1 of 8: Welcome and Company Overview
+Revision 4.2 - Effective 1 January 2026
+
+NOTICE: Larkfield Systems is a fictional company. This handbook is synthetic
+material written for testing the OnboardAI assistant. It contains no real
+employee, company or customer data, and nothing in it is legal advice.
+
+-------------------------------------------------------------------------------
+1.1 WELCOME
+
+Welcome to Larkfield Systems. This handbook is the approved reference for our
+employment policies. It is maintained by the People Operations team and is
+reviewed every January.
+
+Where a policy is set out in another document in this handbook, that document
+is the authority. This overview does not repeat figures stated elsewhere.
+
+-------------------------------------------------------------------------------
+1.2 WHO WE ARE
+
+Larkfield Systems was founded in 2014 and builds inventory forecasting software
+for mid-sized manufacturers. We employ 240 people.
+
+Our headquarters is at 1100 Fenway Street, Baltimore, Maryland. We maintain a
+second office in Portland, Oregon, which opened in 2019. All other employees
+work remotely within the United States.
+
+The Chief Executive Officer is Dana Whitfield, who co-founded the company. The
+Chief Technology Officer is Marcus Oyelaran. The Head of People Operations is
+Priya Raghunathan.
+
+-------------------------------------------------------------------------------
+1.3 HOW WE ARE ORGANISED
+
+The company has five departments:
+
+  - Engineering
+  - Product and Design
+  - Customer Success
+  - Revenue
+  - Corporate Operations, which contains People Operations, Finance and Legal
+
+Each department is led by a Vice President who reports to the Chief Executive
+Officer. Teams within a department are normally six to ten people.
+
+-------------------------------------------------------------------------------
+1.4 OUR VALUES
+
+Four values guide how we work:
+
+  Evidence over instinct.   We look at the data before we decide.
+  Say the hard thing early. We raise problems while they are still small.
+  Leave it better.          We improve what we touch, including documentation.
+  Respect the whole person. Work is part of a life, not the whole of one.
+
+Values are discussed at every performance review. See document 8.
+
+-------------------------------------------------------------------------------
+1.5 THE COMPANY CALENDAR
+
+Our fiscal year runs from 1 February to 31 January.
+
+A company-wide all-hands meeting is held on the first Thursday of every month
+at 11:00 Eastern Time. It is recorded and posted to the intranet within one
+business day for employees who cannot attend live.
+
+Two in-person company gatherings are held each year, one in Baltimore in May
+and one in Portland in November. Travel is paid by the company. Attendance is
+encouraged but not required.
+
+-------------------------------------------------------------------------------
+1.6 WHERE TO GET HELP
+
+For questions about this handbook, contact People Operations at
+people@larkfieldsystems.example. For anything urgent relating to safety,
+contact your manager first.
+
+A question this handbook does not answer should go to People Operations rather
+than being guessed at.
