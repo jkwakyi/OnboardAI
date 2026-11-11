@@ -1,0 +1,103 @@
+LARKFIELD SYSTEMS EMPLOYEE HANDBOOK
+Document 8 of 8: Onboarding, Training and Performance
+Revision 4.2 - Effective 1 January 2026
+
+NOTICE: Larkfield Systems is a fictional company. This handbook is synthetic
+material written for testing the OnboardAI assistant. It contains no real
+employee, company or customer data, and nothing in it is legal advice.
+
+-------------------------------------------------------------------------------
+8.1 BEFORE YOUR FIRST DAY
+
+People Operations sends your equipment to arrive at least three business days
+before your start date, along with instructions for setting up your accounts.
+
+Contact people@larkfieldsystems.example if your equipment has not arrived two
+business days before you start.
+
+-------------------------------------------------------------------------------
+8.2 YOUR FIRST WEEK
+
+Day one runs to a fixed schedule:
+
+  09:30  Welcome session with People Operations
+  11:00  Account setup and security training enrolment
+  13:00  Lunch with your team, in person or by video
+  14:30  First meeting with your manager
+  16:00  Introduction to your onboarding buddy
+
+Within the first week you will also complete the security awareness training
+described in document 7 and enrol in benefits as described in document 5.
+
+-------------------------------------------------------------------------------
+8.3 YOUR ONBOARDING BUDDY
+
+Every new employee is assigned an onboarding buddy, an experienced colleague
+outside their direct reporting line.
+
+The buddy answers day-to-day questions and meets the new employee weekly for
+the first 90 days. The buddy does not assess performance and plays no part in
+the introductory period review.
+
+-------------------------------------------------------------------------------
+8.4 CHECK-INS AND THE INTRODUCTORY REVIEW
+
+Structured check-ins with your manager are held at 30, 60 and 90 days.
+
+The 90-day check-in is also the formal introductory period review described in
+document 2. Its outcome is one of three: confirmation in the role, an extension
+of the introductory period by up to 30 days, or termination of employment.
+
+-------------------------------------------------------------------------------
+8.5 PERFORMANCE REVIEWS
+
+Formal performance reviews are held twice a year, in April and October.
+
+Each review covers delivery against goals and how the employee works with
+others, assessed against the four company values in document 1.
+
+Reviews use a four-point scale: Below expectations, Meeting expectations,
+Exceeding expectations, and Outstanding.
+
+Every employee writes a self-assessment before the review. Managers collect
+feedback from at least two colleagues the employee has worked with.
+
+-------------------------------------------------------------------------------
+8.6 PROMOTION
+
+Promotion means moving to a higher salary band, as described in document 3.
+
+Promotions are decided in the April and October review cycles. A manager puts
+forward a case, which is reviewed by the department Vice President and by
+People Operations to check that the standard is applied consistently across
+teams.
+
+There is no minimum time in band before promotion.
+
+-------------------------------------------------------------------------------
+8.7 WHEN PERFORMANCE FALLS SHORT
+
+Where performance is below expectations, the manager and employee agree a
+performance improvement plan setting out what must change, what support will be
+given, and how progress will be measured.
+
+A performance improvement plan runs for 60 days. It is reviewed every two weeks
+and ends in either a return to good standing or termination of employment.
+
+A performance improvement plan is never the first conversation about a problem.
+
+-------------------------------------------------------------------------------
+8.8 LEARNING AND DEVELOPMENT
+
+Each employee has a professional development budget of 1,500 US dollars per
+fiscal year for books, courses, certifications and similar.
+
+The budget does not carry over between fiscal years. Spend it through the
+expense system with manager approval, following the rules in document 3.
+
+Employees may additionally attend one professional conference per fiscal year.
+Registration and travel for an approved conference come from the company travel
+budget and not from the 1,500 US dollar development budget.
+
+Internal technical talks are held every second Wednesday at 15:00 Eastern Time
+and are open to everyone.

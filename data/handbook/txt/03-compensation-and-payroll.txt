@@ -1,0 +1,84 @@
+LARKFIELD SYSTEMS EMPLOYEE HANDBOOK
+Document 3 of 8: Compensation and Payroll
+Revision 4.2 - Effective 1 January 2026
+
+NOTICE: Larkfield Systems is a fictional company. This handbook is synthetic
+material written for testing the OnboardAI assistant. It contains no real
+employee, company or customer data, and nothing in it is legal advice.
+
+-------------------------------------------------------------------------------
+3.1 PAY SCHEDULE
+
+Employees are paid semi-monthly, on the 15th of the month and on the last
+business day of the month. Where the 15th falls on a weekend or a company
+holiday, payment is made on the preceding business day.
+
+Payment is by direct deposit. Bank details are changed through the payroll
+portal; a change made fewer than five business days before a pay date takes
+effect from the following pay date.
+
+Payslips are available in the payroll portal on the morning of each pay date
+and are retained there for seven years.
+
+-------------------------------------------------------------------------------
+3.2 SALARY STRUCTURE
+
+Every role is mapped to one of six salary bands, numbered L1 to L6. Band
+ranges are reviewed each November against market data and published to all
+employees on the intranet in December.
+
+Your band is stated in your offer letter and confirmed at every performance
+review. Moving band is a promotion and is described in document 8.
+
+Salary increases take effect on 1 February, the first day of the fiscal year.
+
+-------------------------------------------------------------------------------
+3.3 OVERTIME
+
+Non-exempt employees are paid 1.5 times their regular hourly rate for hours
+worked beyond 40 in a work week.
+
+Overtime must be approved in writing by your manager before it is worked.
+Unapproved overtime is still paid, in line with the law, but is treated as a
+performance matter.
+
+Exempt employees are not eligible for overtime pay.
+
+-------------------------------------------------------------------------------
+3.4 THE REFERRAL BONUS
+
+Employees who refer a candidate that Larkfield Systems hires receive a referral
+bonus of 2,000 US dollars.
+
+The bonus is paid on the pay date following the referred employee completing
+90 days of employment. Both the referrer and the referred employee must still
+be employed on that date.
+
+Members of the Revenue department talent team and anyone involved in the hiring
+decision for that role are not eligible.
+
+-------------------------------------------------------------------------------
+3.5 BUSINESS EXPENSES
+
+Reasonable business expenses are reimbursed. Submit claims in the expense
+system with an itemised receipt.
+
+  - Claims must be submitted within 30 days of the expense being incurred.
+    Claims submitted later require Vice President approval.
+  - Any single expense over 500 US dollars requires manager approval before it
+    is incurred.
+  - Reimbursement is paid with the next semi-monthly payroll run after
+    approval.
+
+The daily meal allowance when travelling for business is 70 US dollars.
+Alcohol is not reimbursable.
+
+Mileage in a personal vehicle for business travel is reimbursed at the standard
+federal rate published each January.
+
+-------------------------------------------------------------------------------
+3.6 PAYROLL ERRORS
+
+Report a suspected error to payroll@larkfieldsystems.example within 10 business
+days of the pay date. Confirmed underpayments are corrected by an off-cycle
+payment within three business days of confirmation.
