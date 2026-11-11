@@ -1,0 +1,45 @@
+# Local development stack for OnboardAI.
+#
+#   docker compose up -d       start PostgreSQL and ChromaDB
+#   docker compose down        stop them (data is kept)
+#   docker compose down -v     stop them and delete the data
+#
+# The backend and frontend run on the host, not in Compose, so they reload as
+# you edit. These two stores are what everyone needs to share.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: onboardai-postgres
+    environment:
+      POSTGRES_USER: onboardai
+      POSTGRES_PASSWORD: onboardai
+      POSTGRES_DB: onboardai
+    ports:
+      # Host 5432 -> container 5432. Matches DATABASE_URL in .env.example.
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U onboardai -d onboardai"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  chroma:
+    image: chromadb/chroma:1.5.9
+    container_name: onboardai-chroma
+    ports:
+      # Host 8001 -> container 8000, leaving host 8000 for the backend API.
+      - "8001:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+    healthcheck:
+      test: ["CMD", "/bin/bash", "-c", "cat < /dev/null > /dev/tcp/localhost/8000"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres_data:
+  chroma_data:

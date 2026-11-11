@@ -1,0 +1,11 @@
+# Normalise line endings so Windows and Linux checkouts agree.
+* text=auto eol=lf
+
+# Shell scripts must keep LF or they break on Linux CI.
+*.sh text eol=lf
+
+# Binary assets Git must not touch.
+*.png binary
+*.pdf binary
+*.docx binary
+*.drawio text eol=lf
