@@ -29,6 +29,7 @@ See [How to add an entry](#how-to-add-an-entry).
 | [TD-10](#td-10--no-migration-tooling-for-the-main-database) | No migration tooling for the Main Database | Storage | Open |
 | [TD-11](#td-11--the-watcher-parses-test-output-with-regular-expressions) | The watcher parses test output with regular expressions | Tooling | Accepted |
 | [TD-12](#td-12--the-jira-board-snapshot-is-only-as-fresh-as-the-last-sync) | The Jira board snapshot is only as fresh as the last sync | Tooling | Accepted |
+| [TD-13](#td-13--nothing-automated-proves-the-embedding-api-still-answers) | Nothing automated proves the Embedding API still answers | AI Chatbot Module | Open |
 
 Status is **Open** (we intend to pay it back), **Accepted** (we have decided
 to live with it, and the entry says why), or **Mitigated** (paid back; kept
@@ -293,6 +294,34 @@ board read as current would be worse than no board at all.
 **Mitigation.** The panel header always shows how long ago it synced, so
 staleness is visible rather than silent. Setting `JIRA_EMAIL` and
 `JIRA_API_TOKEN` in `.env` turns on live polling for anyone who wants it.
+
+---
+
+### TD-13 — Nothing automated proves the Embedding API still answers
+
+**Taken:** 11 November 2026, in ON-10 · **Status:** Open
+
+**What.** `scripts/check_embedding_api.py` is the only thing that makes a
+real request to the Embedding API, and a person has to run it by hand.
+`backend/tests/test_embedding_api_check.py` covers every branch of the
+script with the transport replaced, so the suite never leaves the machine.
+
+**Why.** A real embedding request needs a paid key. Putting one in CI means
+a repository secret and a bill that grows with every push, and putting one
+in the default test run means teammates without a key see failures that say
+nothing about their change.
+
+**Impact.** A revoked key, a renamed model or a provider breaking change
+will not show up until somebody runs the script or until the Embedding
+Client (ON-41) fails at upload time with a less obvious error. The 1536
+dimension width is also asserted only against our own setting, not against
+what the provider actually returns, unless the script is run.
+
+**Mitigation.** The script exists, is one command, and is named in the
+README and in `.env.example` next to the key. When ON-49 builds the
+pipeline, add a job that runs it only when an `EMBEDDING_API_KEY` secret is
+present, so forks and teammates are unaffected and the main repository
+still gets the signal.
 
 ---
 

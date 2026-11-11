@@ -16,7 +16,7 @@ Built for CMSC 495 by Brad Campos, Jared Ahenkora-Kwakyi and Muhammed Ayday.
 | Backend API | FastAPI — one application, modular monolith |
 | Main Database | PostgreSQL — users, documents, sections, chat logs, feedback, escalations |
 | Vector Database | ChromaDB — section embeddings |
-| Embedding API | External, over HTTPS |
+| Embedding API | OpenAI `text-embedding-3-small`, called over HTTPS |
 | LLM | Behind an `LLMProvider` interface; Mock LLM or a real provider |
 
 The design is fixed and lives in [`docs/`](docs/). The Interface Contracts are
@@ -102,6 +102,34 @@ npm run dev
 ```
 
 The app is at <http://localhost:5173>.
+
+### 4. Embedding API key
+
+The assistant turns document sections and questions into vectors through a
+hosted Embedding API. The provider is **OpenAI**, the model is
+`text-embedding-3-small`, and it returns **1536** dimensions — the width the
+ChromaDB collection is built for.
+
+Create a key at <https://platform.openai.com/api-keys> and put it in your own
+`.env` at the repository root:
+
+```
+EMBEDDING_API_KEY=your-key-here
+```
+
+The key is server-side only. It never goes in `frontend/.env`, never in a
+`VITE_`-prefixed variable, and never in a commit: `.env` is ignored by Git.
+Then prove it works:
+
+```bash
+python scripts/check_embedding_api.py
+```
+
+That makes one real request and reports the vector width and how long it
+took. It prints nothing that could leak the key. Run it after creating the
+key, and again whenever the provider, model or key changes.
+
+The rest of the stack runs without a key — only the embedding path needs it.
 
 ## Tests and lint
 
