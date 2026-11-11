@@ -132,6 +132,25 @@ npm test
 npm run lint
 ```
 
+## Watching a build
+
+A local page shows what is happening while you work: the current test run with
+its live output, the git state, which services are up, and a timeline.
+
+```bash
+python tools/watch/watch_server.py
+```
+
+Then open <http://127.0.0.1:8777>, and put `run.py` in front of commands whose
+progress should appear there:
+
+```bash
+python tools/watch/run.py --label "backend pytest" --cwd backend -- pytest
+```
+
+Output still streams to your terminal and the exit code is passed through.
+See [`tools/watch/README.md`](tools/watch/README.md).
+
 ## Layout
 
 ```
@@ -150,6 +169,8 @@ frontend/
 data/
   handbook/       the synthetic company handbook, as TXT and PDF
 scripts/          developer scripts
+tools/
+  watch/          the development watcher page
 docs/             architecture diagram and Interface Contracts
 ```
 
