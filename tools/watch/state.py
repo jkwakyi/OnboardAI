@@ -58,18 +58,27 @@ def read_state() -> dict[str, Any]:
         return json.loads(json.dumps(EMPTY_STATE))
 
 
-def write_state(state: dict[str, Any]) -> None:
-    """Write state atomically, so a reader never sees a partial file."""
+def write_json_atomic(path: Path, payload: dict[str, Any]) -> None:
+    """Write JSON through a temporary file, so a reader never sees it partial.
+
+    The page polls once a second while these files are being written, so a
+    plain open-and-write would regularly serve half a document.
+    """
     ensure_dir()
-    state["updated"] = time.time()
     handle, tmp_name = tempfile.mkstemp(dir=str(WATCH_DIR), suffix=".tmp")
     try:
         with os.fdopen(handle, "w", encoding="utf-8") as tmp:
-            json.dump(state, tmp)
-        os.replace(tmp_name, STATE_PATH)
+            json.dump(payload, tmp)
+        os.replace(tmp_name, path)
     except BaseException:
         Path(tmp_name).unlink(missing_ok=True)
         raise
+
+
+def write_state(state: dict[str, Any]) -> None:
+    """Write the run state atomically."""
+    state["updated"] = time.time()
+    write_json_atomic(STATE_PATH, state)
 
 
 def append_event(kind: str, text: str) -> None:
