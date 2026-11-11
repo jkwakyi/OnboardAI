@@ -168,6 +168,7 @@ frontend/
   src/            React application
 data/
   handbook/       the synthetic company handbook, as TXT and PDF
+  evaluation/     the 30-question evaluation set
 scripts/          developer scripts
 tools/
   watch/          the development watcher page
@@ -192,6 +193,18 @@ The corpus deliberately leaves some subjects uncovered so the HR fallback path
 can be tested. [`data/handbook/README.md`](data/handbook/README.md) lists both
 the facts the evaluation questions rely on and the gaps, and the tests fail if
 either changes.
+
+## The evaluation question set
+
+[`data/evaluation/questions.json`](data/evaluation/questions.json) holds the 30
+questions the assistant is measured against. Twenty are answerable and carry
+their expected answer and the handbook section that answers it; ten are
+unanswerable and must produce the HR fallback rather than an invented policy.
+
+The questions are checked against the handbook itself — section references,
+quoted sentences and every figure in an expected answer — so a mistake in the
+test data cannot be mistaken later for the assistant answering badly. See
+[`data/evaluation/README.md`](data/evaluation/README.md).
 
 ## Contributing
 
