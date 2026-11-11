@@ -178,6 +178,19 @@ on trust: there is always a live page showing what is happening.
 `tools/watch/README.md` has the detail, including the optional live-polling
 mode for when the assistant is not running.
 
+## Technical debt (standing rule)
+
+**Record a shortcut in the same pull request that takes it.** Add an entry to
+[`TECHNICAL-DEBT.md`](TECHNICAL-DEBT.md) stating what was done, why, the
+impact and the mitigation.
+
+A log written at the end is a log written from memory, and the entries that
+get forgotten are exactly the ones nobody wanted to admit to. ON-51 keeps it;
+it is the source for the Refinement Report.
+
+Hardcoded values, mock implementations, skipped tests, deferred decisions and
+"we will fix this after the alpha" all count.
+
 ## Quality
 
 - Write tests with each ticket and run lint.

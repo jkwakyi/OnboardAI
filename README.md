@@ -206,6 +206,12 @@ quoted sentences and every figure in an expected answer — so a mistake in the
 test data cannot be mistaken later for the assistant answering badly. See
 [`data/evaluation/README.md`](data/evaluation/README.md).
 
+## Technical debt
+
+[`TECHNICAL-DEBT.md`](TECHNICAL-DEBT.md) records every shortcut taken during
+the build, with what it costs and how it gets paid back. Add an entry in the
+same pull request as the shortcut.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for branch naming, commit message and
