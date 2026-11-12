@@ -13,7 +13,7 @@ import { describe, expect, it } from 'vitest'
 
 import TokenGallery from './TokenGallery'
 import { GALLERY_TOKENS, TOKEN_GROUPS } from './tokenManifest'
-import { TOKEN_GALLERY_HASH, isTokenGalleryEnabled } from './devFlags'
+import { COMPONENT_GALLERY_HASH, TOKEN_GALLERY_HASH, devRoute } from './devFlags'
 import { fromSrc } from '../test/paths'
 
 describe('the token gallery', () => {
@@ -49,30 +49,37 @@ describe('the token gallery', () => {
   })
 })
 
-describe('the development flag', () => {
-  it('opens the gallery only at its own hash', () => {
-    expect(isTokenGalleryEnabled(TOKEN_GALLERY_HASH)).toBe(true)
-    expect(isTokenGalleryEnabled('')).toBe(false)
-    expect(isTokenGalleryEnabled('#chat')).toBe(false)
+describe('the development routes', () => {
+  it('open a gallery only at its own hash', () => {
+    expect(devRoute(TOKEN_GALLERY_HASH)).toBe('tokens')
+    expect(devRoute(COMPONENT_GALLERY_HASH)).toBe('components')
+    expect(devRoute('')).toBeNull()
+    expect(devRoute('#chat')).toBeNull()
   })
 
-  it('is guarded in App.tsx by the literal Vite replaces at build time', () => {
-    // isTokenGalleryEnabled alone would keep the gallery in the bundle:
-    // Rollup cannot see through the function call to know the branch is
-    // dead. The literal in App.tsx is what actually drops it.
-    const app = readFileSync(fromSrc('App.tsx'), 'utf8')
+  it.each(['tokens', 'components'])(
+    'guard the %s page in App.tsx with the literal Vite replaces at build time',
+    (route) => {
+      // devRoute() alone would keep the galleries in the bundle: Rollup
+      // cannot see through the function call to know the branch is dead.
+      // The literal in App.tsx is what actually drops them.
+      const app = readFileSync(fromSrc('App.tsx'), 'utf8')
 
-    expect(app).toContain('import.meta.env.DEV && isTokenGalleryEnabled()')
-  })
+      expect(app).toContain(`import.meta.env.DEV && devRoute() === '${route}'`)
+    },
+  )
 
-  it('imports its stylesheet as a string, not as a side effect', () => {
-    // A plain `import './TokenGallery.css'` is a side effect Rollup keeps
-    // even after it drops this module, which put the gallery's 2 kB of CSS
-    // into the alpha bundle. `?inline` makes it an ordinary string export
-    // that goes with the rest.
-    const gallery = readFileSync(fromSrc('dev', 'TokenGallery.tsx'), 'utf8')
+  it.each(['TokenGallery', 'ComponentGallery'])(
+    '%s imports its stylesheet as a string, not as a side effect',
+    (name) => {
+      // A plain `import './TokenGallery.css'` is a side effect Rollup keeps
+      // even after it drops the module, which put the gallery's 2 kB of CSS
+      // into the alpha bundle. `?inline` makes it an ordinary string export
+      // that goes with the rest.
+      const source = readFileSync(fromSrc('dev', `${name}.tsx`), 'utf8')
 
-    expect(gallery).toContain("from './TokenGallery.css?inline'")
-    expect(gallery).not.toMatch(/^import '\.\/TokenGallery\.css'$/m)
-  })
+      expect(source).toContain(`from './${name}.css?inline'`)
+      expect(source).not.toMatch(new RegExp(`^import '\\./${name}\\.css'$`, 'm'))
+    },
+  )
 })
