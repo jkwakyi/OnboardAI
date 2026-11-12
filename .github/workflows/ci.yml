@@ -1,0 +1,186 @@
+# Continuous integration for OnboardAI (ON-49).
+#
+# Runs on every push and every pull request. Three jobs, deliberately
+# separate so a failure says which part of the system broke rather than
+# "the build failed":
+#
+#   backend      lint, format and the unit tests
+#   frontend     lint, unit tests and the production build
+#   integration  the tests that need PostgreSQL and ChromaDB
+#
+# The integration job is the one that pays something back. Those tests are
+# opt-in locally (TD-04) because they need `docker compose up -d`, which
+# means in practice they run when someone remembers. Here they run on every
+# change, against the same image versions docker-compose.yml pins.
+
+name: CI
+
+on:
+  push:
+  pull_request:
+
+# A second push to the same branch makes the first run pointless. Cancel it
+# rather than queueing behind it - except on main, where every commit's
+# result is worth keeping.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+env:
+  # Development happens on Windows and CI runs Linux, so the versions are
+  # pinned here rather than left to whatever the runner ships.
+  PYTHON_VERSION: '3.13'
+  NODE_VERSION: '20'
+
+jobs:
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: backend/pyproject.toml
+
+      - name: Install
+        working-directory: backend
+        run: pip install -e ".[dev]"
+
+      - name: Lint
+        working-directory: backend
+        run: ruff check .
+
+      - name: Check formatting
+        working-directory: backend
+        run: ruff format --check .
+
+      # No .env and no services: the unit tests must run on a bare machine,
+      # which is what the settings defaults are for. If this step starts
+      # needing a database, something has leaked out of the integration
+      # tests and into the unit ones.
+      - name: Unit tests
+        working-directory: backend
+        run: pytest
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install
+        working-directory: frontend
+        run: npm ci
+
+      - name: Lint
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Unit tests
+        working-directory: frontend
+        run: npm test
+
+      # Type-checks all three TypeScript projects and then builds.
+      - name: Build
+        working-directory: frontend
+        run: npm run build
+
+      # TD-14: the development token gallery is kept out of the bundle by
+      # two source-level conventions. The tests check those conventions are
+      # still written down; this checks the artefact that actually ships.
+      - name: The development token gallery is not in the build
+        working-directory: frontend
+        run: |
+          if grep -rq "gallery-swatch" dist/; then
+            echo "::error::The development token gallery leaked into the production build."
+            grep -rl "gallery-swatch" dist/
+            exit 1
+          fi
+          echo "Clean: no gallery code in dist/."
+
+      # There is nowhere to deploy to yet, so the pipeline stops at a
+      # deployable artefact. Keeping it makes a build downloadable from the
+      # run page rather than only reproducible by hand. See TD-15.
+      - name: Keep the built frontend
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
+          retention-days: 7
+
+  integration:
+    name: Integration
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        # Same versions as docker-compose.yml. If one moves, move both.
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: onboardai
+          POSTGRES_PASSWORD: onboardai
+          POSTGRES_DB: onboardai
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U onboardai -d onboardai"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+      chroma:
+        image: chromadb/chroma:1.5.9
+        # Host 8001 matches CHROMA_PORT in .env.example and the compose file.
+        ports:
+          - 8001:8000
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: backend/pyproject.toml
+
+      - name: Install
+        working-directory: backend
+        run: pip install -e ".[dev]"
+
+      # Chroma gets no service health check: the one in docker-compose.yml
+      # needs bash inside the container, which is awkward to quote here and
+      # brittle if the image changes. Waiting from outside is clearer, and a
+      # timeout here says "Chroma never came up" instead of hanging.
+      - name: Wait for ChromaDB
+        run: |
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://localhost:8001/api/v2/heartbeat > /dev/null; then
+              echo "ChromaDB answered after ${attempt} attempt(s)."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::ChromaDB did not answer on port 8001 within 60 seconds."
+          exit 1
+
+      # The same repeatable setup step the README gives a developer. If this
+      # fails, the migration is broken for everyone, not just for CI.
+      - name: Create the Main Database tables
+        working-directory: backend
+        run: alembic upgrade head
+
+      - name: Integration tests
+        working-directory: backend
+        run: pytest -m integration

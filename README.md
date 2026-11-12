@@ -1,5 +1,7 @@
 # OnboardAI
 
+[![CI](https://github.com/jkwakyi/OnboardAI/actions/workflows/ci.yml/badge.svg)](https://github.com/jkwakyi/OnboardAI/actions/workflows/ci.yml)
+
 An AI employee onboarding assistant. Employees ask questions in a chat page
 and get answers with citations drawn from HR documents an HR administrator
 has uploaded. When nothing in the documents matches well enough, the answer
@@ -196,6 +198,28 @@ npm test
 ```bash
 npm run lint
 ```
+
+## Continuous integration
+
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on every push and
+every pull request, in three jobs:
+
+| Job | What it runs |
+| --- | --- |
+| Backend | `ruff check`, `ruff format --check`, `pytest` (unit tests) |
+| Frontend | `npm run lint`, `npm test`, `npm run build`, then a check that the development token gallery is not in `dist/` |
+| Integration | PostgreSQL and ChromaDB as service containers, `alembic upgrade head`, then `pytest -m integration` |
+
+The integration job is the one worth knowing about: those tests are
+deselected locally so the fast suite stays fast and Docker stays optional, so
+CI is the only place they run on every change.
+
+Everything runs on Linux while development happens on Windows, which is
+deliberate — it is how a path separator or a case-sensitive import gets
+caught before it reaches `main`.
+
+Nothing is deployed. The frontend job uploads `dist/` as a run artefact; see
+TD-15 in [`TECHNICAL-DEBT.md`](TECHNICAL-DEBT.md).
 
 ## Watching a build
 
