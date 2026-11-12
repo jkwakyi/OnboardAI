@@ -1,0 +1,43 @@
+/*
+ * The login page (ON-65's placeholder for ON-38).
+ */
+
+.login {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: var(--space-5);
+  background: var(--bg);
+}
+
+.login__panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: var(--login-width);
+  max-width: 100%;
+}
+
+.login__name {
+  color: var(--text);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+}
+
+.login__tagline {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.login__note {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.login__roles {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: stretch;
+}

@@ -1,0 +1,61 @@
+/*
+ * The application shell (ON-65).
+ */
+
+.shell {
+  display: flex;
+
+  /* The viewport, not the content: the rail and the content area scroll
+     independently, which is the whole point of the layout.
+
+     100dvh rather than 100vh, with 100vh underneath it for anything that
+     does not know the newer unit. On a phone 100vh counts the space the
+     address bar is sitting in, so the bottom of the rail - which is where
+     Sign out lives - ends up under it. */
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.shell__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.shell__content {
+  flex: 1;
+  padding: var(--space-5);
+  overflow-y: auto;
+}
+
+/* The content area takes focus from the skip link, which would otherwise
+   draw a ring around the entire page. The link has already moved the
+   keyboard there; a ring adds nothing. */
+.shell__content:focus {
+  outline: none;
+}
+
+/*
+ * The skip link. Off-screen until focused, then pinned to the top left so
+ * it is the first thing a keyboard user sees.
+ */
+.shell__skip {
+  position: absolute;
+  inset-block-start: var(--space-2);
+  inset-inline-start: var(--space-2);
+  z-index: 1;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-input);
+  background: var(--surface-2);
+  color: var(--text);
+  text-decoration: none;
+  transform: translateY(-200%);
+  transition: transform var(--transition);
+}
+
+.shell__skip:focus-visible {
+  transform: translateY(0);
+}
