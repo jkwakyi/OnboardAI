@@ -1,0 +1,57 @@
+/*
+ * Card (ON-64).
+ */
+
+.oa-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  overflow: hidden;
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface-1);
+}
+
+/*
+ * The accent rule. A pseudo-element rather than a border-top, so the card's
+ * own hairline stays unbroken underneath it and the corners still round.
+ */
+.oa-card--accented::before {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 0;
+  height: var(--accent-edge-width);
+  background: var(--accent);
+  content: "";
+}
+
+.oa-card--accented {
+  padding-block-start: calc(var(--space-5) + var(--accent-edge-width));
+}
+
+.oa-card__header {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.oa-card__label {
+  margin: 0;
+}
+
+.oa-card__action {
+  display: flex;
+  flex: none;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.oa-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}

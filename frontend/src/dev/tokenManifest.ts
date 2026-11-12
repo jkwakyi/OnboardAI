@@ -110,6 +110,31 @@ export const TOKEN_GROUPS: TokenGroup[] = [
     tokens: ['--shadow-raised'],
   },
   {
+    title: 'Controls',
+    note: 'The two heights a button, input or select is drawn at.',
+    preview: 'space',
+    tokens: [
+      '--control-height-sm',
+      '--control-height-md',
+      '--icon-size-sm',
+      '--icon-size-md',
+    ],
+  },
+  {
+    title: 'Component measurements',
+    note: 'Sizes one component needs; no stylesheet may hold its own.',
+    preview: 'value',
+    tokens: [
+      '--accent-edge-width',
+      '--ring-size',
+      '--ring-thickness',
+      '--skeleton-line-height',
+      '--dropzone-min-height',
+      '--toast-width',
+      '--disabled-opacity',
+    ],
+  },
+  {
     title: 'Font stacks',
     note: 'System fonts only: nothing downloads in the alpha.',
     preview: 'font-family',
@@ -147,9 +172,14 @@ export const TOKEN_GROUPS: TokenGroup[] = [
   },
   {
     title: 'Motion',
-    note: 'All three become 0ms under prefers-reduced-motion.',
+    note: 'The durations become 0ms under prefers-reduced-motion.',
     preview: 'value',
-    tokens: ['--transition-duration', '--transition-easing', '--transition'],
+    tokens: [
+      '--transition-duration',
+      '--transition-easing',
+      '--transition',
+      '--spin-duration',
+    ],
   },
 ]
 
