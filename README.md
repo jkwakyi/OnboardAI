@@ -134,6 +134,12 @@ npm run dev
 
 The app is at <http://localhost:5173>.
 
+All styling comes from the design tokens in
+`frontend/src/styles/tokens.css` — no component contains a colour. The groups,
+the measured contrast ratios and the development token gallery at
+<http://localhost:5173/#tokens> are documented in
+[`frontend/README.md`](frontend/README.md#design-tokens).
+
 ### 5. Embedding API key
 
 The assistant turns document sections and questions into vectors through a
@@ -225,7 +231,10 @@ backend/
   migrations/     Alembic: how the Main Database tables are created
   tests/
 frontend/
-  src/            React application
+  src/
+    styles/       design tokens and base styles
+    dev/          the development token gallery
+  README.md       how the interface is put together
 data/
   handbook/       the synthetic company handbook, as TXT and PDF
   evaluation/     the 30-question evaluation set

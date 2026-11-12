@@ -1,0 +1,212 @@
+/*
+ * Base styles (ON-63): the reset, the document's own typography, the focus
+ * ring and the scrollbar.
+ *
+ * Every value here comes from tokens.css. This file styles the document and
+ * bare elements only - it defines no components. Those are ON-64.
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* The browser's default margins fight every layout. Remove them once here
+   rather than in each component. */
+body,
+h1,
+h2,
+h3,
+h4,
+p,
+figure,
+blockquote,
+dl,
+dd {
+  margin: 0;
+}
+
+ul[role="list"],
+ol[role="list"] {
+  padding: 0;
+  list-style: none;
+}
+
+html {
+  /* No scroll-behavior: smooth. It is a motion preference, and the reduced
+     motion block below would have to undo it. */
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--text-md);
+  font-weight: var(--weight-regular);
+  line-height: var(--line-height-body);
+
+  /* Keeps text from thickening on dark backgrounds in WebKit. */
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-weight: var(--weight-semibold);
+  line-height: var(--line-height-tight);
+
+  /* Headings wrap badly by default: a one-word last line is common. */
+  text-wrap: balance;
+}
+
+h1 {
+  font-size: var(--text-xl);
+}
+
+h2 {
+  font-size: var(--text-lg);
+}
+
+h3 {
+  font-size: var(--text-md);
+}
+
+h4 {
+  font-size: var(--text-sm);
+}
+
+p {
+  text-wrap: pretty;
+}
+
+small {
+  font-size: var(--text-sm);
+}
+
+code,
+kbd,
+pre,
+samp {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
+a {
+  color: var(--accent-escalations);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+
+hr {
+  border: 0;
+  border-top: var(--border-width) solid var(--border);
+}
+
+/* Form controls do not inherit type by default, which is how a select ends
+   up in the system font while everything around it is not. */
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+img,
+svg,
+video {
+  display: block;
+  max-width: 100%;
+}
+
+/*
+ * Focus.
+ *
+ * :focus-visible only, so a mouse click does not leave a ring behind while a
+ * keyboard Tab still does. The default :focus outline is deliberately left
+ * alone - suppressing it is how keyboard users lose their place.
+ */
+:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+/*
+ * Scrollbars.
+ *
+ * The standard properties cover Firefox and current Chrome; the WebKit
+ * pseudo-elements cover Safari, which does not support them yet.
+ */
+* {
+  scrollbar-color: var(--border-strong) var(--bg);
+  scrollbar-width: thin;
+}
+
+::-webkit-scrollbar {
+  width: var(--space-3);
+  height: var(--space-3);
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+
+::-webkit-scrollbar-thumb {
+  border: var(--space-1) solid var(--bg);
+  border-radius: var(--radius-pill);
+  background: var(--border-strong);
+}
+
+::selection {
+  background: var(--accent-info-soft);
+}
+
+/*
+ * The uppercase label that sits above a group of cards. It is here rather
+ * than in a component because it is a text style, applied to whatever
+ * element the heading level calls for.
+ */
+.section-label {
+  color: var(--label-color);
+  font-size: var(--label-size);
+  font-weight: var(--label-weight);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+}
+
+/* Visible to a screen reader, not on screen. Needed from the first page
+   onwards for things like "Skip to content". */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/*
+ * Reduced motion.
+ *
+ * tokens.css already sets --transition-duration to 0ms, which covers every
+ * component that uses the token. This is the backstop for anything that
+ * animates without one.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+}
