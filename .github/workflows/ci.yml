@@ -33,16 +33,19 @@ env:
   # Development happens on Windows and CI runs Linux, so the versions are
   # pinned here rather than left to whatever the runner ships.
   PYTHON_VERSION: '3.13'
-  NODE_VERSION: '20'
+  # jsdom 31 pulls in undici 8, which needs Node 22.19 or newer. Node 20 gets
+  # as far as starting a vitest worker and then dies inside undici. CI found
+  # that; the README had said 20 was fine.
+  NODE_VERSION: '24'
 
 jobs:
   backend:
     name: Backend
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
@@ -72,9 +75,9 @@ jobs:
     name: Frontend
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -114,7 +117,7 @@ jobs:
       # deployable artefact. Keeping it makes a build downloadable from the
       # run page rather than only reproducible by hand. See TD-15.
       - name: Keep the built frontend
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: frontend-dist
           path: frontend/dist
@@ -147,9 +150,9 @@ jobs:
           - 8001:8000
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
