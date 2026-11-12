@@ -228,10 +228,29 @@ Passwords are stored as scrypt hashes with the cost parameters written into
 each hash, so the cost can be raised later without locking anybody out — see
 the module docstring in
 [`backend/app/services/auth/passwords.py`](backend/app/services/auth/passwords.py)
-for why these parameters. Two things the alpha does not do are recorded as
-[TD-19](TECHNICAL-DEBT.md#td-19--a-login-token-cannot-be-withdrawn-once-issued)
-and
-[TD-20](TECHNICAL-DEBT.md#td-20--nothing-limits-failed-login-attempts).
+for why these parameters.
+
+With the API running, logging in looks like this:
+
+```bash
+curl -X POST http://localhost:8000/api/auth/login -H 'Content-Type: application/json' -d '{"email":"employee@onboardai.example","password":"the-one-you-chose"}'
+```
+
+The response is the token and nothing else, which is what the Interface
+Contracts say comes back. Everything the Login Page needs to render — the
+holder's name and role — is already in the token's claims, and Auth Check
+(ON-14) is what enforces the role on every later request.
+
+Bad credentials are a `401` with the same message whichever way they are
+wrong; a malformed body is a `422`, including one carrying a field the
+contracts do not define. Ten failures from one address, or from one client,
+inside fifteen minutes earn a `429` with a `Retry-After` header — checked
+before any password is hashed, so a refused request is cheap. The limit
+lives in the process, so run **one** uvicorn worker for the alpha; what it
+does and does not cover is
+[TD-20](TECHNICAL-DEBT.md#td-20--nothing-limits-failed-login-attempts), and
+the fact that a token cannot be withdrawn once issued is
+[TD-19](TECHNICAL-DEBT.md#td-19--a-login-token-cannot-be-withdrawn-once-issued).
 
 ## Tests and lint
 
