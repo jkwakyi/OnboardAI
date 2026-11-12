@@ -1,0 +1,150 @@
+/*
+ * Design tokens (ON-63).
+ *
+ * This file is the only place in the frontend that may contain a literal
+ * colour, size or duration. Everything else refers to a custom property, so
+ * changing a value here restyles the whole application and a test fails if a
+ * component hard-codes one instead.
+ *
+ * Dark theme only for the alpha. The names say what a value is for rather
+ * than what it looks like, so a light theme can later redefine the same
+ * names under a `[data-theme="light"]` selector without touching a single
+ * component.
+ *
+ * Colours are declared twice: once as a space-separated channel triple
+ * (`--accent-chat-rgb`) and once as the colour itself. The triple is what
+ * makes the `-soft` tints possible without repeating the value, so each
+ * colour is still written down exactly once.
+ */
+
+:root {
+  /* Tells the browser to render form controls and scrollbars dark. */
+  color-scheme: dark;
+
+  /* ----- Surfaces ------------------------------------------------------ */
+  --bg: #121216;
+  --surface-1: #1a1a20;
+  --surface-2: #22222a;
+
+  /* A hairline between surfaces. Decorative: the surfaces themselves carry
+     the separation, so this does not need to meet non-text contrast. */
+  --border: #2e2e38;
+
+  /* The boundary of a control the user has to find - an input, a select, an
+     unfilled button. 3.17:1 against --surface-2, which meets WCAG 1.4.11.
+     --border is 1.18:1 there and would leave an input invisible. */
+  --border-strong: #6e6e82;
+
+  /* ----- Text ---------------------------------------------------------- */
+  --text: #ececf1;
+  --text-muted: #a0a0ae;
+
+  /* ----- Section accents, one per area --------------------------------- */
+  --accent-chat-rgb: 242 123 165;
+  --accent-documents-rgb: 245 162 93;
+  --accent-escalations-rgb: 106 168 247;
+  --accent-info-rgb: 167 139 250;
+
+  --accent-chat: rgb(var(--accent-chat-rgb));
+  --accent-documents: rgb(var(--accent-documents-rgb));
+  --accent-escalations: rgb(var(--accent-escalations-rgb));
+  --accent-info: rgb(var(--accent-info-rgb));
+
+  /* ----- Status -------------------------------------------------------- */
+  --success-rgb: 111 211 160;
+  --warning-rgb: 242 203 92;
+  --danger-rgb: 240 112 122;
+
+  --success: rgb(var(--success-rgb));
+  --warning: rgb(var(--warning-rgb));
+  --danger: rgb(var(--danger-rgb));
+
+  /* ----- Soft tints ----------------------------------------------------
+     15% alpha, for the background of a pill or a tinted panel. Text sitting
+     on one of these is still --text or --text-muted, both of which pass AA
+     over the surface underneath. */
+  --soft-alpha: 15%;
+
+  --accent-chat-soft: rgb(var(--accent-chat-rgb) / var(--soft-alpha));
+  --accent-documents-soft: rgb(var(--accent-documents-rgb) / var(--soft-alpha));
+  --accent-escalations-soft: rgb(var(--accent-escalations-rgb) / var(--soft-alpha));
+  --accent-info-soft: rgb(var(--accent-info-rgb) / var(--soft-alpha));
+  --success-soft: rgb(var(--success-rgb) / var(--soft-alpha));
+  --warning-soft: rgb(var(--warning-rgb) / var(--soft-alpha));
+  --danger-soft: rgb(var(--danger-rgb) / var(--soft-alpha));
+
+  /* ----- Spacing -------------------------------------------------------
+     In rem, so the whole layout grows when someone raises their browser's
+     default font size. The pixel value in the comment assumes the 16px
+     default. */
+  --space-1: 0.25rem; /* 4px */
+  --space-2: 0.5rem; /* 8px */
+  --space-3: 0.75rem; /* 12px */
+  --space-4: 1rem; /* 16px */
+  --space-5: 1.5rem; /* 24px */
+  --space-6: 2rem; /* 32px */
+  --space-7: 3rem; /* 48px */
+
+  /* ----- Shape ---------------------------------------------------------
+     Named for what they go on, so a component does not have to decide
+     which radius is "the medium one". */
+  --radius-input: 8px;
+  --radius-card: 12px;
+  --radius-pill: 999px;
+
+  --border-width: 1px;
+
+  /* One shadow, for anything that sits above a surface: a menu, a dialog,
+     a dragged card. Flat elements get a border instead. */
+  --shadow-raised: 0 1px 2px rgb(0 0 0 / 30%), 0 8px 24px rgb(0 0 0 / 35%);
+
+  /* ----- Type ----------------------------------------------------------
+     System UI only. Nothing downloads a webfont in the alpha, so the first
+     paint carries no network cost and no third-party asset. */
+  --font-sans: system-ui, -apple-system, "Segoe UI", roboto, "Helvetica Neue",
+    arial, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", "Segoe UI Mono", menlo, consolas,
+    monospace;
+
+  --text-xs: 0.75rem; /* 12px - labels, metadata */
+  --text-sm: 0.875rem; /* 14px - secondary text, controls */
+  --text-md: 1rem; /* 16px - body */
+  --text-lg: 1.25rem; /* 20px - card and section headings */
+  --text-xl: 1.75rem; /* 28px - page title */
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+
+  --line-height-tight: 1.25;
+  --line-height-body: 1.5;
+
+  /* The uppercase label above a group of cards. */
+  --label-size: var(--text-xs);
+  --label-weight: var(--weight-semibold);
+  --label-tracking: 0.12em;
+  --label-color: var(--text-muted);
+
+  /* ----- Focus ---------------------------------------------------------
+     Violet rather than one of the three section accents, so the ring never
+     reads as "this belongs to documents". */
+  --focus-ring-color: var(--accent-info);
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+
+  /* ----- Motion -------------------------------------------------------- */
+  --transition-duration: 150ms;
+  --transition-easing: ease;
+  --transition: var(--transition-duration) var(--transition-easing);
+}
+
+/*
+ * Redefining the token is what actually disables motion: every component
+ * that animates reads --transition, so none of them has to remember this
+ * media query. base.css adds a blanket guard for anything that slips past.
+ */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --transition-duration: 0ms;
+  }
+}
