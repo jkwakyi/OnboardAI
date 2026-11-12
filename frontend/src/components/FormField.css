@@ -1,0 +1,68 @@
+/*
+ * FormField (ON-64).
+ */
+
+.oa-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.oa-field__label {
+  color: var(--text);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  line-height: var(--line-height-tight);
+}
+
+.oa-field__control {
+  width: 100%;
+  min-height: var(--control-height-md);
+  padding: var(--space-2) var(--space-3);
+
+  /* --border-strong, not --border: this edge is the only thing that says
+     where the control is, and --border is 1.18:1 against the surface. */
+  border: var(--border-width) solid var(--border-strong);
+  border-radius: var(--radius-input);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: var(--text-sm);
+  transition: border-color var(--transition);
+}
+
+textarea.oa-field__control {
+  min-height: var(--dropzone-min-height);
+  resize: vertical;
+}
+
+.oa-field__control::placeholder {
+  color: var(--text-muted);
+}
+
+.oa-field__control:hover:not(:disabled) {
+  border-color: var(--text-muted);
+}
+
+.oa-field__control:disabled {
+  opacity: var(--disabled-opacity);
+  cursor: not-allowed;
+}
+
+.oa-field--invalid .oa-field__control {
+  border-color: var(--danger);
+}
+
+.oa-field__helper {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
+.oa-field__error {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  color: var(--danger);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+}

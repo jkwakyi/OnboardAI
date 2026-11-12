@@ -1,0 +1,48 @@
+/*
+ * StatusPill (ON-64).
+ *
+ * A soft tint behind the status colour itself. The tint is 15% alpha over
+ * whatever surface the pill lands on, so the text keeps the contrast the
+ * token test measured against the surface underneath.
+ */
+
+.oa-pill {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: center;
+  padding: var(--space-1) var(--space-3);
+  border: var(--border-width) solid transparent;
+  border-radius: var(--radius-pill);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  line-height: var(--line-height-tight);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.oa-pill--success {
+  border-color: var(--success-soft);
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.oa-pill--warning {
+  border-color: var(--warning-soft);
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.oa-pill--danger {
+  border-color: var(--danger-soft);
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+/* No status colour at all: a state that is simply not finished yet. The
+   border does the work the tint does elsewhere. */
+.oa-pill--neutral {
+  border-color: var(--border-strong);
+  background: var(--surface-2);
+  color: var(--text-muted);
+}

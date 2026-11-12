@@ -1,0 +1,59 @@
+/*
+ * Toast (ON-64).
+ */
+
+.oa-toast {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  width: var(--toast-width);
+  max-width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border: var(--border-width) solid var(--border);
+  border-inline-start: var(--accent-edge-width) solid var(--accent);
+  border-radius: var(--radius-card);
+  background: var(--surface-1);
+
+  /* It sits above the page, so it gets the one shadow rather than relying
+     on its border to separate it from whatever it is covering. */
+  box-shadow: var(--shadow-raised);
+}
+
+.oa-toast--info {
+  --accent: var(--accent-info);
+}
+
+.oa-toast--success {
+  --accent: var(--success);
+}
+
+.oa-toast--danger {
+  --accent: var(--danger);
+}
+
+.oa-toast__icon {
+  flex: none;
+  width: var(--icon-size-md);
+  height: var(--icon-size-md);
+  color: var(--accent);
+}
+
+.oa-toast__text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  flex: 1;
+}
+
+.oa-toast__title {
+  color: var(--text);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  line-height: var(--line-height-tight);
+}
+
+.oa-toast__message {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}

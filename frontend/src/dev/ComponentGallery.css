@@ -1,0 +1,78 @@
+/*
+ * Styles for the development component gallery (ON-64).
+ *
+ * Only layout: the components bring their own appearance, which is the
+ * point of looking at them here. This is development scaffolding, so unlike
+ * a component stylesheet it may set its own reading widths.
+ */
+
+.sink {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-7);
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: var(--space-7) var(--space-5);
+}
+
+.sink-note {
+  max-width: 48rem;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.sink-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface-1);
+}
+
+.sink-heading {
+  font-size: var(--text-lg);
+}
+
+/* Wrapping rather than a grid: the point is to see everything at once, and
+   the widths differ wildly from one component to the next. */
+.sink-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  align-items: flex-start;
+  margin-top: var(--space-3);
+}
+
+.sink-stack {
+  display: flex;
+  flex: 0 1 auto;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+
+.sink-stack--wide {
+  flex: 1 1 24rem;
+  align-items: stretch;
+}
+
+/* The left rail is narrow in the real shell, so the quick actions are shown
+   in something the same shape. */
+.sink-rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 16rem;
+  padding: var(--space-3);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--bg);
+}
+
+.sink-row > .oa-card,
+.sink-row > .oa-stat,
+.sink-row > .oa-empty {
+  flex: 1 1 20rem;
+}

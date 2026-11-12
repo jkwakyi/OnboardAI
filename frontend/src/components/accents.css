@@ -1,0 +1,28 @@
+/*
+ * The accent classes (ON-64).
+ *
+ * Each one binds the two generic names every accented component reads to
+ * one of the section accents from tokens.css. A component writes
+ * `var(--accent)`; which colour that is depends on the class its caller
+ * asked for.
+ */
+
+.oa-accent-chat {
+  --accent: var(--accent-chat);
+  --accent-soft: var(--accent-chat-soft);
+}
+
+.oa-accent-documents {
+  --accent: var(--accent-documents);
+  --accent-soft: var(--accent-documents-soft);
+}
+
+.oa-accent-escalations {
+  --accent: var(--accent-escalations);
+  --accent-soft: var(--accent-escalations-soft);
+}
+
+.oa-accent-info {
+  --accent: var(--accent-info);
+  --accent-soft: var(--accent-info-soft);
+}
