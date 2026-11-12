@@ -1,0 +1,138 @@
+/*
+ * Button (ON-64).
+ *
+ * No measurement, colour or duration is written down here. A value typed
+ * into a component stylesheet is invisible to the token gallery and does
+ * not follow when the scale changes, so the rule is absolute and
+ * `noHardcodedSizes.test.ts` enforces it.
+ */
+
+.oa-button {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: center;
+  height: var(--control-height-md);
+  padding-inline: var(--space-4);
+  border: var(--border-width) solid transparent;
+  border-radius: var(--radius-input);
+  background: none;
+  color: var(--text);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  line-height: var(--line-height-tight);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color var(--transition), border-color var(--transition),
+    color var(--transition), filter var(--transition);
+}
+
+.oa-button--sm {
+  height: var(--control-height-sm);
+  padding-inline: var(--space-3);
+  font-size: var(--text-xs);
+}
+
+/* A square button, so the icon sits in the middle of it rather than at the
+   start of an empty label. */
+.oa-button--icon-only {
+  padding-inline: 0;
+  aspect-ratio: 1;
+}
+
+.oa-button__icon,
+.oa-button__spinner {
+  flex: none;
+  width: var(--icon-size-md);
+  height: var(--icon-size-md);
+}
+
+.oa-button--sm .oa-button__icon,
+.oa-button--sm .oa-button__spinner {
+  width: var(--icon-size-sm);
+  height: var(--icon-size-sm);
+}
+
+/* The icon slot holds whatever the caller passed, which is normally an SVG
+   drawn at its own size. */
+.oa-button__icon > svg {
+  width: 100%;
+  height: 100%;
+}
+
+.oa-button__spinner {
+  animation: oa-spin var(--spin-duration) linear infinite;
+}
+
+@keyframes oa-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+/* ----- Variants --------------------------------------------------------
+   The two filled variants put --bg on an accent, which is the inverse of
+   the pairing the contrast test already checks, so both are well clear of
+   AA. */
+
+.oa-button--primary {
+  background: var(--accent-info);
+  color: var(--bg);
+}
+
+.oa-button--danger {
+  background: var(--danger);
+  color: var(--bg);
+}
+
+.oa-button--secondary {
+  border-color: var(--border-strong);
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.oa-button--ghost {
+  color: var(--text-muted);
+}
+
+/* ----- States ---------------------------------------------------------- */
+
+/* A relative lift rather than a second set of colours: one more hover
+   colour per variant is four more values to keep in step with the first
+   four, for a difference nobody can name. */
+.oa-button--primary:hover:not(:disabled),
+.oa-button--danger:hover:not(:disabled) {
+  filter: brightness(1.12);
+}
+
+.oa-button--secondary:hover:not(:disabled) {
+  border-color: var(--text-muted);
+}
+
+.oa-button--ghost:hover:not(:disabled) {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.oa-button:active:not(:disabled) {
+  filter: brightness(0.94);
+}
+
+.oa-button:disabled {
+  opacity: var(--disabled-opacity);
+  cursor: not-allowed;
+}
+
+/*
+ * After :disabled, because a loading button is also a disabled one - but it
+ * is unavailable for a different reason, and it should not look the same.
+ * Dimmed to 45% it reads as "you cannot do this", the spinner is hard to
+ * make out, and the label it is still showing goes grey for no reason. Full
+ * strength and a progress cursor say "working" instead, while the disabled
+ * attribute still does the only thing that matters: refuse the second
+ * press.
+ */
+.oa-button--loading {
+  opacity: 1;
+  cursor: progress;
+}

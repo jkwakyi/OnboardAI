@@ -1,0 +1,43 @@
+/*
+ * StatTile (ON-64).
+ */
+
+.oa-stat {
+  display: flex;
+  gap: var(--space-4);
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface-2);
+}
+
+.oa-stat__text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.oa-stat__label {
+  margin: 0;
+}
+
+.oa-stat__value {
+  margin: 0;
+  color: var(--text);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  line-height: var(--line-height-tight);
+
+  /* Digits of equal width, so a counter that ticks up does not shuffle the
+     text beside it on every change. */
+  font-variant-numeric: tabular-nums;
+}
+
+.oa-stat__caption {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}

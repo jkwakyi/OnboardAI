@@ -137,9 +137,12 @@ npm run dev
 The app is at <http://localhost:5173>.
 
 All styling comes from the design tokens in
-`frontend/src/styles/tokens.css` — no component contains a colour. The groups,
-the measured contrast ratios and the development token gallery at
-<http://localhost:5173/#tokens> are documented in
+`frontend/src/styles/tokens.css` — no component contains a colour or a
+measurement. Pages are built from the shared components in
+`frontend/src/components/`. Two development pages show the lot:
+<http://localhost:5173/#tokens> for the tokens and
+<http://localhost:5173/#components> for every component in every state.
+Both, and the measured contrast ratios, are documented in
 [`frontend/README.md`](frontend/README.md#design-tokens).
 
 ### 5. Embedding API key
@@ -257,7 +260,8 @@ backend/
 frontend/
   src/
     styles/       design tokens and base styles
-    dev/          the development token gallery
+    components/   the shared UI component library
+    dev/          the development token and component galleries
   README.md       how the interface is put together
 data/
   handbook/       the synthetic company handbook, as TXT and PDF

@@ -1,0 +1,49 @@
+/*
+ * Skeleton (ON-64).
+ *
+ * The shimmer is one gradient moved across a wide background, rather than
+ * an overlay element: fewer nodes, and nothing to position when the bar
+ * changes size. Under prefers-reduced-motion the base.css guard stops it
+ * and the bars simply sit there, which is the right outcome - a skeleton
+ * does not need to move to say "not yet".
+ */
+
+.oa-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.oa-skeleton__bar {
+  height: var(--skeleton-line-height);
+  border-radius: var(--radius-pill);
+  background: linear-gradient(
+    90deg,
+    var(--surface-2) 25%,
+    var(--surface-1) 37%,
+    var(--surface-2) 63%
+  );
+  background-size: 400% 100%;
+  animation: oa-shimmer var(--spin-duration) ease-in-out infinite;
+}
+
+/* The last bar stops short, the way a last line of a paragraph does. */
+.oa-skeleton--text .oa-skeleton__bar:last-child {
+  width: 60%;
+}
+
+.oa-skeleton--block .oa-skeleton__bar {
+  height: var(--dropzone-min-height);
+  border-radius: var(--radius-card);
+}
+
+@keyframes oa-shimmer {
+  from {
+    background-position: 100% 50%;
+  }
+
+  to {
+    background-position: 0% 50%;
+  }
+}

@@ -1,0 +1,49 @@
+/*
+ * CitationChip (ON-64).
+ */
+
+.oa-citation {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: baseline;
+  max-width: 100%;
+  padding: var(--space-1) var(--space-3);
+  border: var(--border-width) solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  line-height: var(--line-height-tight);
+  text-align: start;
+  cursor: pointer;
+  transition: border-color var(--transition), color var(--transition);
+}
+
+.oa-citation:hover {
+  border-color: var(--accent-chat);
+  color: var(--text);
+}
+
+.oa-citation__icon {
+  flex: none;
+  width: var(--icon-size-sm);
+  height: var(--icon-size-sm);
+
+  /* The icons sit on their own baseline; nudging with the text's own
+     line-height keeps the quote mark level with the title. */
+  align-self: center;
+  color: var(--accent-chat);
+}
+
+.oa-citation__title {
+  overflow: hidden;
+  color: var(--text);
+  font-weight: var(--weight-medium);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.oa-citation__location {
+  flex: none;
+  white-space: nowrap;
+}

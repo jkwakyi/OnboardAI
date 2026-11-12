@@ -32,6 +32,8 @@ See [How to add an entry](#how-to-add-an-entry).
 | [TD-13](#td-13--nothing-automated-proves-the-embedding-api-still-answers) | Nothing automated proves the Embedding API still answers | AI Chatbot Module | Open |
 | [TD-14](#td-14--the-token-gallery-is-kept-out-of-the-build-by-convention) | The token gallery is kept out of the build by convention | Frontend | Mitigated |
 | [TD-15](#td-15--the-pipeline-has-no-deployment-stage) | The pipeline has no deployment stage | Build | Accepted |
+| [TD-16](#td-16--every-components-css-ships-used-or-not) | Every component's CSS ships, used or not | Frontend | Accepted |
+| [TD-17](#td-17--citationchip-is-a-button-that-does-nothing-yet) | CitationChip is a button that does nothing yet | Frontend | Accepted |
 
 Status is **Open** (we intend to pay it back), **Accepted** (we have decided
 to live with it, and the entry says why), or **Mitigated** (paid back; kept
@@ -432,3 +434,59 @@ the closest thing to a release and expires after 7 days.
 **Mitigation.** Accepted for the alpha. If a host is chosen later, the
 frontend job already produces the artefact a deploy step would publish, and
 the backend would need a container image, which does not exist yet either.
+
+---
+
+### TD-16 — Every component's CSS ships, used or not
+
+**Taken:** 12 November 2026, in ON-64 · **Status:** Accepted · **Ticket:** ON-65
+
+**What.** Each component imports its own stylesheet for the side effect
+(`import './Button.css'`). Rollup has to keep a side-effect import even when
+it drops the module that made it, so a component's CSS is in the bundle from
+the moment the component exists — whether or not any page renders it. Right
+now no page does: the shell is ON-65 and the pages come after it, so the
+alpha build carries about 11 kB of CSS for components nothing uses yet.
+
+**Why.** The alternative is the `?inline` trick the development galleries
+use, which turns the stylesheet into a string the component injects into a
+`<style>` tag. That works for one development page rendered once. For a
+library it means every instance of a component carrying its own stylesheet
+into the DOM, styles arriving after first paint, and no single stylesheet
+for the browser to cache — a worse trade for a saving that disappears as
+soon as the pages exist.
+
+**Impact.** Small and temporary while the pages are built. The lasting part
+is that a component which is *never* used keeps its CSS in the bundle for
+good, and nothing says so: the size test checks what is in a stylesheet, not
+whether anyone needs it.
+
+**Mitigation.** Self-resolving as ON-65 and the page tickets consume the
+library. If a component turns out to be unused once the pages are done, the
+honest fix is to delete it rather than to tune the bundler. The CI job
+already greps `dist/`, so a check for a component class that appears in the
+CSS and nowhere in the JavaScript could be added there cheaply if this ever
+matters.
+
+---
+
+### TD-17 — CitationChip is a button that does nothing yet
+
+**Taken:** 12 November 2026, in ON-64 · **Status:** Accepted · **Ticket:** ON-48
+
+**What.** ON-64 asks for the citation chip to be focusable. It is rendered
+as a `<button>` with an optional `onClick`, and until the chat page wires
+that handler, a keyboard user can tab to it, press it, and get nothing.
+
+**Why.** The alternative was a `<span tabindex="0">`, which is worse: it
+takes the same keystroke and announces nothing about what it is. A button at
+least says it is pressable, and the chip is going to become pressable — ON-48
+hangs "show me that section" off it.
+
+**Impact.** One focus stop per citation that leads nowhere, in the window
+between this ticket and ON-48. Up to five of them under an answer, since
+retrieval returns the top five sections.
+
+**Mitigation.** ON-48 supplies the handler. If that slips past the alpha,
+the chip should stop being a button and become plain text until it does
+something, which is a one-line change in `CitationChip.tsx`.
