@@ -55,6 +55,36 @@ class Settings(BaseSettings):
     # model running; see the LLMProvider interface (ON-44) and ON-18.
     llm_provider: str = "mock"
 
+    # Auth Service (ON-36): the key login tokens are signed with. Secret,
+    # server-side only, never in the React app. Unset is allowed outside
+    # production, where the Auth Service signs with a random per-process key
+    # instead and says so in the log.
+    auth_secret_key: SecretStr | None = None
+    # One working day. A stateless token cannot be withdrawn, so its life is
+    # the only limit on a leaked one (TD-19).
+    auth_token_ttl_minutes: int = 720
+    # The `iss` claim. A token issued by something else, or for a different
+    # deployment, is refused even when the signature checks out.
+    auth_token_issuer: str = "onboardai"
+
+    # scrypt cost. The defaults are 16 MiB and roughly a quarter of a second
+    # per hash; the test suite turns them down, which is safe because every
+    # stored hash records the parameters it was made with. See
+    # app/services/auth/passwords.py for why this row of OWASP's table.
+    password_scrypt_n: int = 16384
+    password_scrypt_r: int = 8
+    password_scrypt_p: int = 5
+
+    # The two synthetic accounts the seed script creates (ON-36). Addresses
+    # and names are not secret and have defaults; the passwords have none,
+    # so the only copy of a development password is in somebody's own .env.
+    seed_employee_email: str = "employee@onboardai.example"
+    seed_employee_name: str = "Alex Rivera"
+    seed_employee_password: SecretStr | None = None
+    seed_hr_email: str = "hr@onboardai.example"
+    seed_hr_name: str = "Jordan Blake"
+    seed_hr_password: SecretStr | None = None
+
     @field_validator("embedding_api_url")
     @classmethod
     def _embedding_api_url_must_be_https(cls, value: str) -> str:
