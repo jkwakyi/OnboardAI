@@ -120,7 +120,22 @@ def _parse(line: str, run: dict[str, Any]) -> None:
             run["total"] = run["passed"] + run["failed"] + run["skipped"]
 
 
+def _make_stdout_unicode_safe() -> None:
+    """Keep a wrapped command's output from killing the wrapper.
+
+    A Windows console defaults to cp1252, so the first box-drawing character
+    a test runner prints raises UnicodeEncodeError here and the run dies
+    without reporting anything. The command itself would have printed it
+    fine. Replacing unencodable characters loses a glyph; crashing loses the
+    run.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
+
+
 def main() -> int:
+    _make_stdout_unicode_safe()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--label", required=True, help="what this run is, shown on the page")
     parser.add_argument("--cwd", default=None, help="directory to run in")
