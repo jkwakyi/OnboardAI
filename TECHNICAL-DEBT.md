@@ -30,6 +30,7 @@ See [How to add an entry](#how-to-add-an-entry).
 | [TD-11](#td-11--the-watcher-parses-test-output-with-regular-expressions) | The watcher parses test output with regular expressions | Tooling | Accepted |
 | [TD-12](#td-12--the-jira-board-snapshot-is-only-as-fresh-as-the-last-sync) | The Jira board snapshot is only as fresh as the last sync | Tooling | Accepted |
 | [TD-13](#td-13--nothing-automated-proves-the-embedding-api-still-answers) | Nothing automated proves the Embedding API still answers | AI Chatbot Module | Open |
+| [TD-14](#td-14--the-token-gallery-is-kept-out-of-the-build-by-convention) | The token gallery is kept out of the build by convention | Frontend | Open |
 
 Status is **Open** (we intend to pay it back), **Accepted** (we have decided
 to live with it, and the entry says why), or **Mitigated** (paid back; kept
@@ -361,3 +362,36 @@ just the current state.
 has all four fields, the index and the sections agree, IDs are unique and in
 order, and statuses are valid. It does not check that entries are honest —
 only we can do that.
+
+---
+
+### TD-14 — The token gallery is kept out of the build by convention
+
+**Taken:** 11 November 2026, in ON-63 · **Status:** Open · **Ticket:** ON-63
+
+**What.** The development token gallery is excluded from the production
+bundle by two source-level conventions rather than by a check on the build
+output: the guard in `App.tsx` must be written as the literal
+`import.meta.env.DEV && ...`, and `TokenGallery.tsx` must import its
+stylesheet with `?inline`. Tests assert both strings are present in the
+source. Nothing inspects `dist/`.
+
+**Why.** Running `vite build` inside the unit test suite would add several
+seconds to every `npm test`, and the frontend has no CI job yet (ON-49) where
+a slower, build-level check would be free.
+
+**Impact.** The tests prove the two conventions are still written down, not
+that the bundle is clean. A third way to leak the gallery — a new import of
+it from shipped code, say — would pass every test. The leak is small (about
+2 kB of CSS and 4 kB of JavaScript) and is a development page, not a
+security boundary, but it is dead weight in a build that is meant to be the
+alpha.
+
+**Verified by hand on 11 November 2026:** after `npm run build`, neither
+`gallery-swatch` nor any gallery string appears in `dist/assets/*.js` or
+`dist/assets/*.css`, and the stylesheet dropped from 6.25 kB to 4.18 kB once
+the `?inline` import replaced the plain one.
+
+**Mitigation.** ON-49 adds the CI pipeline. Add a job step there that runs
+`npm run build` and greps `dist/` for a marker string from the gallery, which
+turns both conventions into one check on the artefact that actually ships.
