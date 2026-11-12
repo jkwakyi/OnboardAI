@@ -26,7 +26,7 @@ See [How to add an entry](#how-to-add-an-entry).
 | [TD-07](#td-07--python-314-is-not-supported) | Python 3.14 is not supported | Build | Open |
 | [TD-08](#td-08--lint-configuration-sits-under-backend-but-covers-the-repository) | Lint configuration sits under `backend/` but covers the repository | Build | Open |
 | [TD-09](#td-09--the-frontend-is-a-placeholder) | The frontend is a placeholder | Frontend | Open |
-| [TD-10](#td-10--no-migration-tooling-for-the-main-database) | No migration tooling for the Main Database | Storage | Open |
+| [TD-10](#td-10--no-migration-tooling-for-the-main-database) | No migration tooling for the Main Database | Storage | Mitigated |
 | [TD-11](#td-11--the-watcher-parses-test-output-with-regular-expressions) | The watcher parses test output with regular expressions | Tooling | Accepted |
 | [TD-12](#td-12--the-jira-board-snapshot-is-only-as-fresh-as-the-last-sync) | The Jira board snapshot is only as fresh as the last sync | Tooling | Accepted |
 | [TD-13](#td-13--nothing-automated-proves-the-embedding-api-still-answers) | Nothing automated proves the Embedding API still answers | AI Chatbot Module | Open |
@@ -235,7 +235,7 @@ content goes as soon as the real thing exists.
 
 ### TD-10 — No migration tooling for the Main Database
 
-**Taken:** 11 November 2026, in ON-9 · **Status:** Open
+**Taken:** 11 November 2026, in ON-9 · **Status:** Mitigated · **Ticket:** ON-11
 
 **What.** `backend/app/db/session.py` creates a SQLAlchemy engine, a session
 factory and a declarative `Base`. There are no models, and no decision has
@@ -249,9 +249,17 @@ schema change against a database holding data has no upgrade path, and
 "recreate the database" stops being acceptable the moment anyone has
 uploaded documents they care about.
 
-**Mitigation.** ON-11 creates the schema. Decide on migrations (Alembic is the
-obvious choice with SQLAlchemy) at the same time rather than after — this
-should be proposed as a ticket before ON-11 starts, not discovered later.
+**Mitigation.** Paid back in ON-11, in the same pull request that created the
+schema rather than in a later one. Alembic owns the tables: `alembic upgrade
+head` is the setup step, `backend/migrations/versions/` is the history, and
+every revision has a working `downgrade`. A test fails if the models and the
+migrations disagree, so the gap this entry warned about — a schema that
+exists in code and not in the database — is now a failing test rather than a
+discovery in production.
+
+**Left over.** Nothing enforces that a migration is *safe* on a table that
+already holds rows: adding a `NOT NULL` column without a default still locks
+and fails. That is a review question until there is data worth protecting.
 
 ---
 
