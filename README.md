@@ -27,7 +27,7 @@ the source of truth for endpoints, fields and error formats.
 ## Prerequisites
 
 - **Python 3.12 or 3.13** (3.14 is not yet supported by all dependencies)
-- **Node.js 20 or newer**
+- **Node.js 22.19 or newer** (jsdom's `undici` refuses to load on 20; CI runs 24)
 - **Docker Desktop**, for PostgreSQL and ChromaDB
 
 ## Setup
