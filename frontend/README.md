@@ -44,7 +44,14 @@ later redefine the same names without touching a component.
 | Type | `--font-sans`, `--font-mono`, `--text-xs` … `--text-xl`, `--weight-regular/medium/semibold`, `--line-height-tight/body` |
 | Section label | `--label-size`, `--label-weight`, `--label-tracking`, `--label-color` |
 | Focus | `--focus-ring-color`, `--focus-ring-width`, `--focus-ring-offset` |
-| Motion | `--transition-duration`, `--transition-easing`, `--transition` |
+| Motion | `--transition-duration`, `--transition-easing`, `--transition`, `--spin-duration` |
+| Controls | `--control-height-sm/md`, `--icon-size-sm/md` |
+| Component measurements | `--accent-edge-width`, `--ring-size`, `--ring-thickness`, `--skeleton-line-height`, `--dropzone-min-height`, `--toast-width`, `--disabled-opacity` |
+
+The last two groups arrived with ON-64. A component stylesheet may not
+contain a measurement at all, so anything a single component needs and no
+scale above describes gets a token rather than an exception — which is what
+keeps it visible in the gallery and changeable in one place.
 
 Each accent and status colour is written down once, as a channel triple
 (`--accent-chat-rgb: 242 123 165`), and the colour and its soft tint are both
@@ -86,39 +93,99 @@ anyone with low vision.
 Soft tints are backgrounds only. Text on one is still `--text` or
 `--text-muted`, both of which clear 4.5:1 against the surface underneath.
 
-## The token gallery
+## Shared components
 
-Every token, rendered from the live stylesheet, at **<http://localhost:5173/#tokens>**
-while `npm run dev` is running. Swatches, the type scale, the spacing scale,
-the radii, the shadow, and three controls to tab through so the focus ring
-can be checked by eye.
+Thirteen components in [`src/components/`](src/components/), imported from
+the barrel file rather than from the individual modules:
 
-It reads the values out of the document rather than repeating them, so a
-token that is renamed shows up as `not set` instead of a stale swatch. A test
-fails if a token exists in `tokens.css` and the gallery neither shows it nor
-lists it as internal plumbing.
+```tsx
+import { Button, Card, StatusPill } from '../components'
+```
+
+| Component | What it is |
+| --- | --- |
+| `Card` | The rounded panel everything sits in. Optional uppercase label, optional accent rule along the top, optional action in the header. |
+| `StatusPill` | `success`, `warning`, `danger`, `neutral`. Takes a variant, not a status name — the statuses belong to the Interface Contracts. |
+| `ProgressRing` | SVG donut, 0–100, percentage in the middle. One `role="img"` named after what it measures. |
+| `StatTile` | Label, value, optional caption, optional ring. Passes its label down so the ring has a subject. |
+| `Button` | `primary`, `secondary`, `ghost`, `danger`; `sm` and `md`; icon, loading, disabled. |
+| `QuickAction` | The left-rail button. A `Button` underneath, so it inherits the tested behaviour. |
+| `FormField` | Label plus `input`, `select` or `textarea`, with helper and error text wired up. |
+| `FileDropzone` | Drag or browse, PDF and TXT, shows name and size, refuses the wrong type and an empty file. |
+| `CitationChip` | The source under an answer: document and location. Focusable. |
+| `Toast` | A message about something that just happened, with an optional close button. |
+| `EmptyState` | Title, reason, and the action that would fill it. |
+| `ErrorState` | An `EmptyState` in the danger tone, always with a retry. |
+| `Skeleton` | Text bars or a block, so the page does not jump when data lands. |
+
+Icons come from [Lucide](https://lucide.dev) (ISC), installed as a
+dependency and re-exported from
+[`src/components/icons.ts`](src/components/icons.ts). Nothing in this
+repository holds a copied SVG file. Adding an icon means adding a line to
+that module, which keeps the set small and makes swapping the package one
+edit.
+
+Four things the components do that are easy to undo by accident:
+
+- **No component stylesheet contains a measurement.** Not a padding, not a
+  width. `src/components/noHardcodedSizes.test.ts` fails on any absolute or
+  font-relative length; ratios (`50%`, `1fr`, `aspect-ratio: 1`) are fine.
+  It also fails on a stylesheet no component imports.
+- **An icon-only `Button` will not compile without an `aria-label`.** The
+  props are a union — either children, or a label — so the missing name is
+  a type error rather than something a screen reader finds later.
+- **Every control edge is `--border-strong`.** `--border` is 1.18:1 against
+  `--surface-2` and would leave an input invisible to someone with low
+  vision. See the contrast table above.
+- **`FileDropzone` is a `<label>` around a real file input.** It is in the
+  tab order and announces itself without a key handler of ours. The usual
+  div-with-`onClick` dropzone is not reachable by keyboard at all.
+
+`Toast` is only the message. Where toasts stack and how long they stay is
+the app shell's business (ON-65): a component that owns its own timer cannot
+be tested without one.
+
+## The development galleries
+
+Two kitchen sinks, while `npm run dev` is running:
+
+| URL | What it shows |
+| --- | --- |
+| <http://localhost:5173/#tokens> | Every design token, read from the live stylesheet |
+| <http://localhost:5173/#components> | Every component, in every state it has |
+
+The token gallery reads values out of the document rather than repeating
+them, so a token that is renamed shows up as `not set` instead of a stale
+swatch. A test fails if a token exists in `tokens.css` and the gallery
+neither shows it nor lists it as internal plumbing.
+
+The component gallery reads the component names out of the library's barrel
+file, so adding a component without putting it on the page fails too. States
+that are awkward to reach in the real app — a button mid-request, a dropzone
+refusing a file, an error with its retry — are all one scroll away.
 
 Two things to know:
 
 - **Changing the hash needs a reload.** `App.tsx` reads the hash once, at
-  mount. Open the URL directly, or refresh after editing it. Routing is
-  ON-65's job and the gallery is not worth a router.
-- **It is not in the production build.** The guard is the literal
-  `import.meta.env.DEV` in `App.tsx`, which Vite replaces with `false` when
-  it builds, so the branch is dead code and the bundler drops the component.
-  Its stylesheet is imported with `?inline` for the same reason — a plain CSS
-  import is a side effect Rollup has to keep. See TD-14 in
-  [`TECHNICAL-DEBT.md`](../TECHNICAL-DEBT.md) for what is still only checked
-  by hand.
+  mount, so editing `#tokens` to `#components` in the address bar does
+  nothing until you refresh. Routing is ON-65's job and a gallery is not
+  worth a router.
+- **Neither is in the production build.** The guard is the literal
+  `import.meta.env.DEV` in `App.tsx`, repeated in both branches, which Vite
+  replaces with `false` when it builds; the branches become dead code and
+  the bundler drops the pages. Both stylesheets are imported with `?inline`
+  for the same reason — a plain CSS import is a side effect Rollup has to
+  keep. The CI frontend job greps `dist/` to prove it (TD-14).
 
 ## Layout
 
 ```
 src/
-  styles/     tokens.css and base.css, plus their tests
-  dev/        the token gallery and the development flag
-  test/       Vitest setup and path helpers
-  App.tsx     shell placeholder until ON-65
+  styles/       tokens.css and base.css, plus their tests
+  components/   the shared library: one .tsx, .css and .test.tsx each
+  dev/          the two galleries and the development routes
+  test/         Vitest setup and path helpers
+  App.tsx       shell placeholder until ON-65
 ```
 
 TypeScript is split into three projects: `tsconfig.app.json` for the
