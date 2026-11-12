@@ -36,7 +36,7 @@ See [How to add an entry](#how-to-add-an-entry).
 | [TD-17](#td-17--citationchip-is-a-button-that-does-nothing-yet) | CitationChip is a button that does nothing yet | Frontend | Accepted |
 | [TD-18](#td-18--the-session-is-a-development-stub-and-a-refresh-signs-you-out) | The session is a development stub and a refresh signs you out | Frontend | Accepted |
 | [TD-19](#td-19--a-login-token-cannot-be-withdrawn-once-issued) | A login token cannot be withdrawn once issued | Backend API | Accepted |
-| [TD-20](#td-20--nothing-limits-failed-login-attempts) | Nothing limits failed login attempts | Backend API | Open |
+| [TD-20](#td-20--nothing-limits-failed-login-attempts) | Nothing limits failed login attempts | Backend API | Mitigated |
 
 Status is **Open** (we intend to pay it back), **Accepted** (we have decided
 to live with it, and the entry says why), or **Mitigated** (paid back; kept
@@ -581,11 +581,12 @@ ask about rather than to make quietly.
 
 ### TD-20 — Nothing limits failed login attempts
 
-**Taken:** 12 November 2026, in ON-36 · **Status:** Open · **Ticket:** ON-37
+**Taken:** 12 November 2026, in ON-36 · **Status:** Mitigated · **Ticket:** ON-37
 
-**What.** The Auth Service will check as many passwords as it is asked to.
-There is no attempt counter, no lockout, no delay that grows, and no rate
-limit in front of the endpoint.
+**What.** As first written, the Auth Service would check as many passwords
+as it was asked to: no attempt counter, no lockout, no delay that grows,
+and no rate limit in front of the endpoint. ON-37 added one the same day —
+see the mitigation, which also says what the limit does *not* cover.
 
 **Why.** ON-36 builds the Auth Service and ON-37 the endpoint; a rate limit
 belongs at the edge, in front of the route, and neither the architecture
@@ -600,8 +601,25 @@ hundred guesses a minute per core rather than millions — but expensive is
 not prevented, and the same cost is also a way to exhaust the server's CPU
 by asking it to hash.
 
-**Mitigation.** scrypt's cost is the floor, deliberately: the same parameter
-that protects a stolen password table also prices an online guess. The real
-fix is a limit per address and per client in front of the login route, which
-is ON-37's to add when the route exists. Until it does, no claim that the
-alpha resists password guessing is supportable.
+**Mitigation.** *12 November 2026, ON-37:* `POST /api/auth/login` now
+limits failures to ten per address and ten per client in a fifteen-minute
+sliding window, checked **before** any password is hashed — so a refused
+request costs about 3 ms instead of 370 ms, which answers the second half
+of the impact above as well as the first. A success clears both counts. The
+number of keys tracked is capped, because a limiter that grows a dictionary
+per attempted address is itself a way to exhaust the server's memory.
+
+Three things it still does not do, and they are the reason this entry is
+worth reading rather than closing. The count lives in the process, so two
+uvicorn workers each allow the full ten and a restart forgets everything —
+run one worker for the alpha. Behind a proxy, `request.client.host` is the
+proxy, so every caller shares one client bucket; `X-Forwarded-For` is
+deliberately not trusted, because anyone can set it and trusting it would
+let an attacker hand themselves a fresh allowance per request. And a
+distributed attempt from many addresses still gets ten guesses each. The
+shape of the fix for all three is the same code against Redis plus a
+trusted-proxy setting, which is a change to ask about rather than to make
+quietly.
+
+scrypt's cost remains the floor underneath all of it: the same parameter
+that protects a stolen password table also prices an online guess.
