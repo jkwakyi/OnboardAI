@@ -135,6 +135,12 @@ export const TOKEN_GROUPS: TokenGroup[] = [
     ],
   },
   {
+    title: 'Shell measurements',
+    note: 'The frame every signed-in page renders inside.',
+    preview: 'value',
+    tokens: ['--rail-width', '--topbar-height', '--login-width'],
+  },
+  {
     title: 'Font stacks',
     note: 'System fonts only: nothing downloads in the alpha.',
     preview: 'font-family',

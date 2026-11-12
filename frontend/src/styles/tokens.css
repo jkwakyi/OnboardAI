@@ -137,6 +137,14 @@
   --dropzone-min-height: 9rem;
   --toast-width: 22rem;
 
+  /* ----- Shell measurements (ON-65) ------------------------------------
+     The frame every signed-in page renders inside. Here for the same
+     reason as the block above: no stylesheet under components/ or shell/
+     may contain a measurement. */
+  --rail-width: 15rem; /* 240px */
+  --topbar-height: 3.5rem; /* 56px */
+  --login-width: 26rem;
+
   /* ----- Type ----------------------------------------------------------
      System UI only. Nothing downloads a webfont in the alpha, so the first
      paint carries no network cost and no third-party asset. */
