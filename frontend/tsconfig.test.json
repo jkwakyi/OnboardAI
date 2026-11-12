@@ -1,0 +1,15 @@
+{
+  "//": "Tests, which may read files. The application project deliberately has no Node types, so a component cannot import 'node:fs'; the tests need them.",
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.test.tsbuildinfo",
+    "types": [
+      "node",
+      "vite/client",
+      "vitest/globals",
+      "@testing-library/jest-dom"
+    ]
+  },
+  "include": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/test"],
+  "exclude": []
+}

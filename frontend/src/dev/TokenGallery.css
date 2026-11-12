@@ -1,0 +1,132 @@
+/*
+ * Styles for the development token gallery (ON-63).
+ *
+ * Every value here is a token, including the ones the gallery uses on
+ * itself: the page is also the first proof that building from the tokens
+ * alone produces something coherent.
+ */
+
+.gallery {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-7);
+  max-width: 60rem;
+  margin: 0 auto;
+  padding: var(--space-7) var(--space-5);
+}
+
+.gallery-header h1 {
+  margin-bottom: var(--space-2);
+}
+
+.gallery-note {
+  max-width: 48rem;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.gallery-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface-1);
+}
+
+.gallery-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 0;
+}
+
+.gallery-row {
+  display: grid;
+  grid-template-columns: minmax(10rem, 16rem) 1fr;
+  gap: var(--space-4);
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-input);
+  background: var(--surface-2);
+}
+
+.gallery-name {
+  font-size: var(--text-sm);
+}
+
+.gallery-value {
+  display: flex;
+  gap: var(--space-4);
+  align-items: center;
+  min-width: 0;
+  margin: 0;
+}
+
+.gallery-computed {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gallery-swatch {
+  flex: none;
+  width: var(--space-7);
+  height: var(--space-6);
+  border: var(--border-width) solid var(--border-strong);
+  border-radius: var(--radius-input);
+}
+
+.gallery-bar {
+  flex: none;
+  height: var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--accent-escalations);
+}
+
+.gallery-shape {
+  flex: none;
+  width: var(--space-7);
+  height: var(--space-6);
+  border: var(--border-width) solid var(--border-strong);
+  background: var(--surface-1);
+}
+
+.gallery-sample {
+  overflow: hidden;
+  line-height: var(--line-height-tight);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gallery-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  align-items: center;
+  margin-top: var(--space-3);
+}
+
+/*
+ * Deliberately plain. These exist to show the focus ring, not to preview the
+ * real button and input: those are ON-64.
+ */
+.gallery-controls button,
+.gallery-controls input {
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width) solid var(--border-strong);
+  border-radius: var(--radius-input);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: var(--text-sm);
+  transition: border-color var(--transition);
+}
+
+.gallery-controls button:hover,
+.gallery-controls input:hover {
+  border-color: var(--text-muted);
+}
