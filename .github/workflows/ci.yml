@@ -103,21 +103,23 @@ jobs:
       # TD-14: the development token gallery is kept out of the bundle by
       # two source-level conventions. The tests check those conventions are
       # still written down; this checks the artefact that actually ships.
-      # One marker per development page: a class only that page's stylesheet
-      # defines, so a leak through either the component or its CSS is caught.
-      - name: The development galleries are not in the build
+      # One marker per development-only thing that must not ship: a class
+      # each gallery's stylesheet defines, and the label on the stubbed
+      # sign-in, which would otherwise be a way into the alpha with no
+      # password (TD-18).
+      - name: Development-only code is not in the build
         working-directory: frontend
         run: |
           leaked=0
-          for marker in gallery-swatch sink-section; do
+          for marker in gallery-swatch sink-section "Continue as Employee"; do
             if grep -rq "$marker" dist/; then
-              echo "::error::A development gallery leaked into the production build ($marker)."
+              echo "::error::Development-only code leaked into the production build ($marker)."
               grep -rl "$marker" dist/
               leaked=1
             fi
           done
           if [ "$leaked" -ne 0 ]; then exit 1; fi
-          echo "Clean: no gallery code in dist/."
+          echo "Clean: no development-only code in dist/."
 
       # There is nowhere to deploy to yet, so the pipeline stops at a
       # deployable artefact. Keeping it makes a build downloadable from the

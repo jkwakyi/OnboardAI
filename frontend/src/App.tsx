@@ -1,13 +1,13 @@
 /**
- * Application shell placeholder.
+ * The application (ON-65).
  *
- * The real shell is ON-65, built on the design tokens from ON-63 and the
- * shared components from ON-64. Nothing here styles anything, so that the
- * tokens ticket owns the first visual decision.
+ * Everything signed-in renders inside the shell; the login page renders
+ * outside it. Both are wired up in `shell/AppRoutes.tsx`.
  */
 import ComponentGallery from './dev/ComponentGallery'
 import { devRoute } from './dev/devFlags'
 import TokenGallery from './dev/TokenGallery'
+import AppRoutes from './shell/AppRoutes'
 
 function App() {
   // The literal `import.meta.env.DEV` has to appear in each branch, not
@@ -23,16 +23,7 @@ function App() {
     return <ComponentGallery />
   }
 
-  return (
-    <main>
-      <h1>OnboardAI</h1>
-      <p>AI employee onboarding assistant.</p>
-      <p>
-        The interface is built in epic ON-62: design tokens (ON-63), shared
-        components (ON-64), app shell (ON-65), then the pages.
-      </p>
-    </main>
-  )
+  return <AppRoutes />
 }
 
 export default App
