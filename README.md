@@ -83,6 +83,37 @@ Then install and run:
 
 ```bash
 pip install -e ".[dev]"
+```
+
+### 3. Create the Main Database tables
+
+Still in `backend`, with the databases running:
+
+```bash
+alembic upgrade head
+```
+
+That creates the six tables the system uses — users, documents, sections,
+chat logs, feedback and escalations. It is safe to run again: Alembic records
+which migrations have been applied, so a second run does nothing.
+
+Run it again after every `git pull` that adds a migration. To see what it
+would do without touching the database, use `alembic upgrade head --sql`; to
+undo the most recent migration, `alembic downgrade -1`.
+
+Adding or changing a table is a migration, not an edit to a live database.
+Change the models in `backend/app/db/models.py`, then:
+
+```bash
+alembic revision --autogenerate -m "what you changed"
+```
+
+Read the generated file before committing it — autogenerate is a draft, not
+an authority. `pytest` fails if the models and the migrations disagree.
+
+Now start the API:
+
+```bash
 uvicorn app.main:app --reload
 ```
 
@@ -91,7 +122,7 @@ The API is at <http://localhost:8000> and its generated documentation at
 Database and Vector Database are reachable; if either is not, start the
 stack with `docker compose up -d`.
 
-### 3. Frontend
+### 4. Frontend
 
 In a second terminal, from the repository root:
 
@@ -103,7 +134,7 @@ npm run dev
 
 The app is at <http://localhost:5173>.
 
-### 4. Embedding API key
+### 5. Embedding API key
 
 The assistant turns document sections and questions into vectors through a
 hosted Embedding API. The provider is **OpenAI**, the model is
@@ -185,12 +216,13 @@ See [`tools/watch/README.md`](tools/watch/README.md).
 backend/
   app/
     api/          the four router groups from the Interface Contracts
-    db/           Main Database (PostgreSQL) engine and session
+    db/           Main Database (PostgreSQL) engine, session and tables
     services/     Auth, Document Upload, Logging, Escalation, QA Controller,
                   Retrieval, Embedding Client, LLM Gateway
     vectorstore/  Vector Database (ChromaDB) client
     config.py     settings, read from the environment
     main.py       application factory
+  migrations/     Alembic: how the Main Database tables are created
   tests/
 frontend/
   src/            React application
