@@ -1,0 +1,39 @@
+/*
+ * QuickAction (ON-64).
+ *
+ * Only the differences from a ghost button: the rail is narrow, so the
+ * label starts at the left edge instead of sitting in the middle, and the
+ * plus gets the accent tint behind it.
+ */
+
+.oa-quick.oa-button {
+  justify-content: flex-start;
+  width: 100%;
+  height: auto;
+  padding: var(--space-2);
+  gap: var(--space-3);
+  border-color: var(--border);
+  color: var(--text);
+  text-align: start;
+}
+
+.oa-quick.oa-button:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--surface-2);
+}
+
+.oa-quick .oa-button__icon {
+  display: grid;
+  place-items: center;
+  width: var(--control-height-sm);
+  height: var(--control-height-sm);
+  padding: var(--space-1);
+  border-radius: var(--radius-input);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.oa-quick .oa-button__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

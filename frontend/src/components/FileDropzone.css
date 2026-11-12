@@ -1,0 +1,102 @@
+/*
+ * FileDropzone (ON-64).
+ */
+
+.oa-drop {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.oa-drop__zone {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: center;
+  min-height: var(--dropzone-min-height);
+  padding: var(--space-5);
+
+  /* Dashed, because the edge of a drop target has to read as "put something
+     inside me" rather than as the edge of a card. */
+  border: var(--border-width) dashed var(--border-strong);
+  border-radius: var(--radius-card);
+  background: var(--surface-2);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color var(--transition), background-color var(--transition);
+}
+
+/*
+ * The input inside is visually hidden, so it is what actually takes focus.
+ * Drawing the ring on the zone is what makes that focus visible; without
+ * this the keyboard user is on a control they cannot see.
+ */
+.oa-drop__zone:has(input:focus-visible) {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.oa-drop__zone:hover,
+.oa-drop__zone--dragging {
+  border-color: var(--accent-documents);
+  background: var(--accent-documents-soft);
+}
+
+.oa-drop__zone--invalid {
+  border-color: var(--danger);
+}
+
+.oa-drop__zone--disabled {
+  opacity: var(--disabled-opacity);
+  cursor: not-allowed;
+}
+
+.oa-drop__icon {
+  width: var(--icon-size-md);
+  height: var(--icon-size-md);
+  color: var(--accent-documents);
+}
+
+.oa-drop__prompt {
+  color: var(--text);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+
+.oa-drop__hint {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+}
+
+.oa-drop__file {
+  display: flex;
+  gap: var(--space-3);
+  align-items: baseline;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-input);
+  background: var(--surface-2);
+  font-size: var(--text-sm);
+}
+
+.oa-drop__name {
+  overflow: hidden;
+  color: var(--text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.oa-drop__size {
+  flex: none;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.oa-drop__error {
+  color: var(--danger);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+}

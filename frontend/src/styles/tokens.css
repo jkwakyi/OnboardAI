@@ -98,6 +98,45 @@
      a dragged card. Flat elements get a border instead. */
   --shadow-raised: 0 1px 2px rgb(0 0 0 / 30%), 0 8px 24px rgb(0 0 0 / 35%);
 
+  /* ----- Controls (ON-64) ----------------------------------------------
+     The height a button, input or select is drawn at. Two of them, because
+     a dense list row and a page's primary action are not the same control.
+     Both are comfortably above the 24px minimum target size in WCAG 2.2. */
+  --control-height-sm: 2rem; /* 32px */
+  --control-height-md: 2.5rem; /* 40px */
+
+  /* The square an icon occupies inside a control, matched to the two text
+     sizes those controls use so an icon never outgrows its label. */
+  --icon-size-sm: 1rem; /* 16px */
+  --icon-size-md: 1.25rem; /* 20px */
+
+  /* A disabled control. Dimming rather than recolouring keeps the shape and
+     the label readable, which matters because a disabled button still has
+     to explain what it would have done. */
+  --disabled-opacity: 0.45;
+
+  /* ----- Component measurements (ON-64) --------------------------------
+     Sizes a single component needs that none of the scales above describes.
+     They live here rather than in the component because the rule is that a
+     stylesheet under components/ contains no measurement at all - a test
+     enforces it - and an exception for "just this one" is how that rule
+     stops meaning anything. */
+
+  /* The accent rule along the top of a card. Thicker than --border-width:
+     it is a signal, not a boundary. */
+  --accent-edge-width: 3px;
+
+  /* A progress ring's outer diameter, and its stroke. The stroke is
+     unitless on purpose: an SVG stroke-width with no unit is in user
+     units, so 10 is a tenth of the ring's 100-unit viewBox and the donut
+     keeps its proportions at any --ring-size. */
+  --ring-size: 5rem;
+  --ring-thickness: 10;
+
+  --skeleton-line-height: 0.75rem;
+  --dropzone-min-height: 9rem;
+  --toast-width: 22rem;
+
   /* ----- Type ----------------------------------------------------------
      System UI only. Nothing downloads a webfont in the alpha, so the first
      paint carries no network cost and no third-party asset. */
@@ -136,6 +175,10 @@
   --transition-duration: 150ms;
   --transition-easing: ease;
   --transition: var(--transition-duration) var(--transition-easing);
+
+  /* One turn of a spinner. Long enough not to read as a blur, short enough
+     that the control still looks busy rather than stuck. */
+  --spin-duration: 900ms;
 }
 
 /*
@@ -146,5 +189,10 @@
 @media (prefers-reduced-motion: reduce) {
   :root {
     --transition-duration: 0ms;
+
+    /* A spinner that never turns is the right answer here: the control is
+       still disabled and still says aria-busy, which is what actually
+       conveys "working" to anyone who is not watching it rotate. */
+    --spin-duration: 0ms;
   }
 }
