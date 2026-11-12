@@ -34,6 +34,7 @@ See [How to add an entry](#how-to-add-an-entry).
 | [TD-15](#td-15--the-pipeline-has-no-deployment-stage) | The pipeline has no deployment stage | Build | Accepted |
 | [TD-16](#td-16--every-components-css-ships-used-or-not) | Every component's CSS ships, used or not | Frontend | Accepted |
 | [TD-17](#td-17--citationchip-is-a-button-that-does-nothing-yet) | CitationChip is a button that does nothing yet | Frontend | Accepted |
+| [TD-18](#td-18--the-session-is-a-development-stub-and-a-refresh-signs-you-out) | The session is a development stub and a refresh signs you out | Frontend | Accepted |
 
 Status is **Open** (we intend to pay it back), **Accepted** (we have decided
 to live with it, and the entry says why), or **Mitigated** (paid back; kept
@@ -230,21 +231,32 @@ unpleasant thing to discover while writing a CI job.
 
 **Taken:** 11 November 2026, in ON-9 · **Status:** Open · **Ticket:** ON-62
 
-**What.** The React application renders a few static lines of text. There is
-no routing, no API client, no design tokens and no styling beyond a base
-font.
+**What.** Every page is a placeholder. As of ON-65 the frontend has design
+tokens, a component library, an application shell, routing and role guards —
+but no page does anything, because none of them exists yet and there is no
+API client to talk to the backend with.
+
+*Updated 12 November 2026.* When this entry was written in ON-9 it said
+"no routing, no API client, no design tokens and no styling beyond a base
+font". Three of those four have landed; the API client has not, and that is
+the one the sentence below about an unproven path depends on.
 
 **Why.** ON-9 was scaffolding only. The interface is epic ON-62, which builds
 tokens (ON-63), then shared components (ON-64), then the app shell (ON-65),
 then the pages — deliberately in that order.
 
-**Impact.** Nothing exercises the frontend beyond a build and two smoke tests.
-The API client (ON-38) does not exist, so no page can talk to the backend yet,
-and the whole frontend-to-backend path is unproven.
+**Impact.** Nothing has yet gone from a click in the browser to a row in the
+Main Database. The API client (ON-38) does not exist, so no page can talk to
+the backend, and the whole frontend-to-backend path is unproven — including
+the error shapes the contracts define, which no page has ever had to render.
+A production build of the frontend currently has no way to sign in at all,
+since the only sign-in is the development stub (see TD-18).
 
-**Mitigation.** ON-63 → ON-64 → ON-65, then the pages. The placeholder text
-names the tickets that replace it, and the quality rule is that placeholder
-content goes as soon as the real thing exists.
+**Mitigation.** ON-38 next, which brings the login page and the API client
+together and proves one path end to end, then the remaining pages. The
+placeholder each route renders names the ticket that replaces it, and the
+quality rule is that placeholder content goes as soon as the real thing
+exists.
 
 ---
 
@@ -490,3 +502,40 @@ retrieval returns the top five sections.
 **Mitigation.** ON-48 supplies the handler. If that slips past the alpha,
 the chip should stop being a button and become plain text until it does
 something, which is a one-line change in `CitationChip.tsx`.
+
+---
+
+### TD-18 — The session is a development stub and a refresh signs you out
+
+**Taken:** 12 November 2026, in ON-65 · **Status:** Accepted · **Ticket:** ON-38
+
+**What.** There is no real sign-in. The login page offers two buttons —
+Continue as Employee, Continue as HR administrator — that put a made-up
+session into React state, and the shell reads the role from there. The
+session is in memory only, so a page refresh signs you out. In a production
+build the buttons are gone and there is no way in at all.
+
+**Why.** The epic's build order puts the shell before the pages, and the
+shell is a role-based layout: it cannot be built, looked at or tested
+without a role to drive it. The alternative was to block ON-65 on ON-36 and
+ON-38, which would have stalled the whole UI sequence behind the Auth
+Service. The ticket itself says to use a stubbed session context until
+ON-38 lands.
+
+Keeping the session in memory is the other half of the same decision. Where
+a token is kept, and for how long, is ON-38's call; writing a second answer
+here would mean either changing it later or quietly keeping both.
+
+**Impact.** Anyone trying the alpha from a build cannot sign in. In
+development, a refresh during a long session costs you your place. The guards
+are real but they guard a fiction: until ON-38, nothing has ever checked a
+password, and until Auth Check sees a token, nothing has enforced a role
+anywhere that matters.
+
+**Mitigation.** ON-38 builds the real login form against
+`POST /api/auth/login` and owns token handling; it maps the response onto the
+same `Session` and calls the same `signIn`, so the shell does not change. The
+stub is behind the literal `import.meta.env.DEV`, which Vite replaces with
+`false` at build time, so the buttons are dead code the bundler drops rather
+than a password-free way into a shipped build. The CI job greps `dist/` for
+them, and a test fails if the guard is removed from the source.

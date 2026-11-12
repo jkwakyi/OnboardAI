@@ -47,11 +47,14 @@ later redefine the same names without touching a component.
 | Motion | `--transition-duration`, `--transition-easing`, `--transition`, `--spin-duration` |
 | Controls | `--control-height-sm/md`, `--icon-size-sm/md` |
 | Component measurements | `--accent-edge-width`, `--ring-size`, `--ring-thickness`, `--skeleton-line-height`, `--dropzone-min-height`, `--toast-width`, `--disabled-opacity` |
+| Shell measurements | `--rail-width`, `--topbar-height`, `--login-width` |
 
-The last two groups arrived with ON-64. A component stylesheet may not
-contain a measurement at all, so anything a single component needs and no
-scale above describes gets a token rather than an exception — which is what
-keeps it visible in the gallery and changeable in one place.
+The last three groups arrived with ON-64 and ON-65. A stylesheet under
+`components/` or `shell/` may not contain a measurement at all, so anything
+one of them needs and no scale above describes gets a token rather than an
+exception — which is what keeps it visible in the gallery and changeable in
+one place. The single exemption is `100dvh` and its siblings: the whole
+viewport is not a size anybody chose. `80vh` is, and still fails.
 
 Each accent and status colour is written down once, as a channel triple
 (`--accent-chat-rgb: 242 123 165`), and the colour and its soft tint are both
@@ -145,6 +148,67 @@ Four things the components do that are easy to undo by accident:
 the app shell's business (ON-65): a component that owns its own timer cannot
 be tested without one.
 
+## The application shell
+
+Everything signed-in renders inside [`src/shell/AppShell.tsx`](src/shell/AppShell.tsx):
+a left rail, a top bar, and a content area that scrolls on its own. The login
+page renders outside it, because there is nothing yet to navigate to.
+
+### The route table
+
+[`src/shell/navigation.ts`](src/shell/navigation.ts) is one list, and both
+the router and the rail are built from it. Two lists drift, and the drift
+that matters is a route still reachable by typing its URL after it was taken
+out of the navigation.
+
+| Path | Who | Page built in |
+| --- | --- | --- |
+| `/chat` | Employee, HR administrator | ON-48 |
+| `/documents` | HR administrator | ON-42 |
+| `/inbox` | HR administrator | ON-21 |
+
+Every route exists from the start. One whose page does not yet renders an
+`EmptyState` naming the ticket that builds it, so the navigation is the real
+navigation rather than links that go nowhere. `/` sends everybody to `/chat`,
+which the epic calls the primary surface.
+
+### The two refusals
+
+They are different answers to different questions, and conflating them is
+the usual bug.
+
+- **Not signed in** is a step that has not happened yet. It redirects to the
+  login page and remembers where the person was going, so signing in
+  finishes the journey rather than dropping them on the default page.
+- **Signed in but not allowed** is a refusal. It stays on the URL that was
+  asked for and says so. Bouncing that case somewhere else hides that the
+  page exists and leaves people re-typing a URL they will never be allowed
+  to open.
+
+Neither is a security control. Auth Check validates the token and the role on
+every request (step 2 of the architecture); this only decides what the
+interface shows.
+
+### Signing in, for now
+
+There is no Auth Service yet (ON-36) and no login form (ON-38). The login
+page offers two buttons that sign you in to a stubbed session as either role,
+so the shell and the guards can be built and looked at. They are behind the
+literal `import.meta.env.DEV` and are not in a production build — the CI job
+greps `dist/` to prove it, and a test fails if the guard is removed. The
+session is in memory, so a refresh signs you out; where a token lives is
+ON-38's decision. See TD-18.
+
+### Keyboard
+
+- A skip link, first in the tab order, pointing at a `<main>` with
+  `tabindex="-1"`. An anchor to a target that cannot take focus scrolls the
+  page and leaves the keyboard where it was, which is why a skip link so
+  often appears to do nothing.
+- The rail is a list of `NavLink`s, which put `aria-current="page"` on the
+  active one. The accent colour says "you are here" to someone looking; that
+  attribute says it to someone listening.
+
 ## The development galleries
 
 Two kitchen sinks, while `npm run dev` is running:
@@ -181,11 +245,13 @@ Two things to know:
 
 ```
 src/
-  styles/       tokens.css and base.css, plus their tests
+  styles/       tokens.css and base.css, plus the token, colour and size tests
   components/   the shared library: one .tsx, .css and .test.tsx each
+  shell/        the app shell, the route table and the guards
+  session/      who is signed in, and the two roles
   dev/          the two galleries and the development routes
-  test/         Vitest setup and path helpers
-  App.tsx       shell placeholder until ON-65
+  test/         Vitest setup, path helpers and renderApp
+  App.tsx       the galleries in development, the router otherwise
 ```
 
 TypeScript is split into three projects: `tsconfig.app.json` for the
