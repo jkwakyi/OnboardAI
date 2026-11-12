@@ -35,6 +35,8 @@ See [How to add an entry](#how-to-add-an-entry).
 | [TD-16](#td-16--every-components-css-ships-used-or-not) | Every component's CSS ships, used or not | Frontend | Accepted |
 | [TD-17](#td-17--citationchip-is-a-button-that-does-nothing-yet) | CitationChip is a button that does nothing yet | Frontend | Accepted |
 | [TD-18](#td-18--the-session-is-a-development-stub-and-a-refresh-signs-you-out) | The session is a development stub and a refresh signs you out | Frontend | Accepted |
+| [TD-19](#td-19--a-login-token-cannot-be-withdrawn-once-issued) | A login token cannot be withdrawn once issued | Backend API | Accepted |
+| [TD-20](#td-20--nothing-limits-failed-login-attempts) | Nothing limits failed login attempts | Backend API | Open |
 
 Status is **Open** (we intend to pay it back), **Accepted** (we have decided
 to live with it, and the entry says why), or **Mitigated** (paid back; kept
@@ -539,3 +541,67 @@ stub is behind the literal `import.meta.env.DEV`, which Vite replaces with
 `false` at build time, so the buttons are dead code the bundler drops rather
 than a password-free way into a shipped build. The CI job greps `dist/` for
 them, and a test fails if the guard is removed from the source.
+
+---
+
+### TD-19 — A login token cannot be withdrawn once issued
+
+**Taken:** 12 November 2026, in ON-36 · **Status:** Accepted · **Ticket:** ON-14
+
+**What.** Login tokens are signed JWTs carrying the user id, email, name and
+role. The server keeps no record of them, so there is no list to remove one
+from: a token is valid until it expires, even if the account it names is
+deleted, has its role changed, or has its password reset.
+
+**Why.** The Interface Contracts say the Main Database holds six things —
+users, documents, sections, chat logs, feedback and escalations — and a
+sessions table is not one of them. Storing issued tokens would mean adding a
+concept the design does not name, and `docs/` is the source of truth. A
+stateless token also lets Auth Check answer "who is this and may they" from
+the request alone, with no database round trip on every call, which is what
+the architecture diagram shows at step 2.
+
+**Impact.** A leaked token works until it expires. Revoking access in a
+hurry means rotating `AUTH_SECRET_KEY`, which signs every holder out at
+once, not just the one. A role change does not take effect until the person
+next logs in — relevant because the role in the token is what Auth Check
+reads, so somebody promoted to HR administrator keeps seeing the Employee
+navigation until their token expires.
+
+**Mitigation.** The token's life is the only limit, so it is short:
+`AUTH_TOKEN_TTL_MINUTES` defaults to 720, one working day. The signing key
+is server-side only, never reaches the browser bundle, and has no committed
+default — in production the backend refuses to start without one. Rotating
+it is the break-glass revocation, and it is one environment variable. If
+per-token revocation turns out to be needed after the alpha, the smallest
+honest version is a `jti` claim and a short deny list, which is a change to
+ask about rather than to make quietly.
+
+---
+
+### TD-20 — Nothing limits failed login attempts
+
+**Taken:** 12 November 2026, in ON-36 · **Status:** Open · **Ticket:** ON-37
+
+**What.** The Auth Service will check as many passwords as it is asked to.
+There is no attempt counter, no lockout, no delay that grows, and no rate
+limit in front of the endpoint.
+
+**Why.** ON-36 builds the Auth Service and ON-37 the endpoint; a rate limit
+belongs at the edge, in front of the route, and neither the architecture
+diagram nor the Interface Contracts name a component that does it. Inventing
+one here would have meant inventing an endpoint's behaviour inside a service
+ticket.
+
+**Impact.** An attacker who can reach the API can guess passwords as fast as
+the server will hash them. scrypt is what makes that expensive rather than
+free — roughly a quarter of a second of one core per attempt, so a few
+hundred guesses a minute per core rather than millions — but expensive is
+not prevented, and the same cost is also a way to exhaust the server's CPU
+by asking it to hash.
+
+**Mitigation.** scrypt's cost is the floor, deliberately: the same parameter
+that protects a stolen password table also prices an online guess. The real
+fix is a limit per address and per client in front of the login route, which
+is ON-37's to add when the route exists. Until it does, no claim that the
+alpha resists password guessing is supportable.
