@@ -175,9 +175,7 @@ def test_an_error_that_echoes_the_key_is_redacted(settings):
 
 
 def test_the_script_never_prints_the_key_on_success(settings, capsys, monkeypatch):
-    monkeypatch.setattr(
-        check_embedding_api, "get_settings", lambda: settings, raising=True
-    )
+    monkeypatch.setattr(check_embedding_api, "get_settings", lambda: settings, raising=True)
     monkeypatch.setattr(
         check_embedding_api,
         "check",
@@ -194,9 +192,7 @@ def test_the_script_never_prints_the_key_on_success(settings, capsys, monkeypatc
 
 
 def test_the_script_exits_non_zero_when_the_check_fails(settings, capsys, monkeypatch):
-    monkeypatch.setattr(
-        check_embedding_api, "get_settings", lambda: settings, raising=True
-    )
+    monkeypatch.setattr(check_embedding_api, "get_settings", lambda: settings, raising=True)
     monkeypatch.setattr(
         check_embedding_api,
         "check",
