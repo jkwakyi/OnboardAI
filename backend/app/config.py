@@ -75,6 +75,13 @@ class Settings(BaseSettings):
     password_scrypt_r: int = 8
     password_scrypt_p: int = 5
 
+    # Login API (ON-37): how often one address, or one client, may fail
+    # before being asked to wait. Checked before any password hashing, so
+    # it limits both guessing and the CPU a caller can make the server
+    # spend. In process, so per worker (TD-20).
+    login_max_attempts: int = 10
+    login_attempt_window_seconds: int = 900
+
     # The two synthetic accounts the seed script creates (ON-36). Addresses
     # and names are not secret and have defaults; the passwords have none,
     # so the only copy of a development password is in somebody's own .env.

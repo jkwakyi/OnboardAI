@@ -4,6 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session
+from sqlalchemy.pool import StaticPool
 
 from app.config import get_settings
 from app.db import Base
@@ -24,8 +25,19 @@ def db_session():
     SQLite ignores foreign keys unless asked, and a suite that silently
     skipped every cascade and RESTRICT rule would pass no matter what the
     schema said.
+
+    One shared connection, usable from any thread, because the endpoint
+    tests go through `TestClient`: FastAPI runs a synchronous endpoint in a
+    threadpool, and SQLite objects belong to the thread that made them. The
+    default pool would also hand each thread its own connection, and an
+    in-memory database belongs to its connection - so the request would
+    look at an empty database and the test would be testing nothing.
     """
-    engine = create_engine("sqlite+pysqlite:///:memory:")
+    engine = create_engine(
+        "sqlite+pysqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
 
     @event.listens_for(engine, "connect")
     def _enforce_foreign_keys(connection, _record):
