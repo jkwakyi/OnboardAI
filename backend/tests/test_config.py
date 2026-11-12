@@ -86,14 +86,23 @@ def test_printing_the_settings_does_not_print_the_key(monkeypatch):
 # --- the key stays out of the repository -------------------------------
 
 
+SECRET_SUFFIXES = ("_KEY", "_TOKEN", "_SECRET", "_PASSWORD")
+
+
 def test_env_example_carries_no_key_value():
-    """.env.example documents the shape; a value in it would be committed."""
+    """.env.example documents the shape; a value in it would be committed.
+
+    _PASSWORD is in the list because of ON-36: the development accounts are
+    synthetic, but a password written into a tracked file is a password
+    every checkout of this repository shares, and the habit of putting one
+    there is the thing worth refusing.
+    """
     for line in (REPO_ROOT / ".env.example").read_text(encoding="utf-8").splitlines():
         stripped = line.strip()
         if stripped.startswith("#"):
             continue
         name, _, value = stripped.partition("=")
-        assert not (name.strip().endswith(("_KEY", "_TOKEN", "_SECRET")) and value.strip()), (
+        assert not (name.strip().endswith(SECRET_SUFFIXES) and value.strip()), (
             f".env.example holds a value for {name.strip()}"
         )
 
@@ -112,6 +121,50 @@ def test_no_secret_is_named_so_that_vite_would_ship_it():
     """
     text = (REPO_ROOT / ".env.example").read_text(encoding="utf-8")
     for name in re.findall(r"^#?\s*(VITE_\w+)=", text, re.MULTILINE):
-        assert not name.endswith(("_KEY", "_TOKEN", "_SECRET")), (
-            f"{name} would be shipped to the browser"
-        )
+        assert not name.endswith(SECRET_SUFFIXES), f"{name} would be shipped to the browser"
+
+
+# --- Auth Service (ON-36) ----------------------------------------------
+
+
+def test_no_signing_key_by_default():
+    """Same rule as the embedding key: a checkout carries no secret."""
+    assert Settings(_env_file=None).auth_secret_key is None
+
+
+def test_printing_the_settings_does_not_print_the_signing_key(monkeypatch):
+    monkeypatch.setenv("AUTH_SECRET_KEY", "not-a-real-signing-key-but-long-enough")
+    settings = Settings()
+    for rendering in (str(settings), repr(settings), str(settings.model_dump())):
+        assert "not-a-real-signing-key-but-long-enough" not in rendering
+
+
+def test_a_token_lasts_one_working_day():
+    """A stateless token cannot be withdrawn, so its life is the only limit
+    on a leaked one (TD-19)."""
+    assert Settings().auth_token_ttl_minutes == 720
+
+
+def test_tokens_are_issued_in_this_deployments_name():
+    assert Settings().auth_token_issuer == "onboardai"
+
+
+def test_the_seed_accounts_use_addresses_that_cannot_be_delivered():
+    """RFC 2606 reserves .example, so no demo account can mail a stranger."""
+    settings = Settings()
+    assert settings.seed_employee_email.endswith(".example")
+    assert settings.seed_hr_email.endswith(".example")
+
+
+def test_no_seed_password_by_default():
+    """The only copy of a development password is in somebody's own .env."""
+    settings = Settings(_env_file=None)
+    assert settings.seed_employee_password is None
+    assert settings.seed_hr_password is None
+
+
+def test_printing_the_settings_does_not_print_a_seed_password(monkeypatch):
+    monkeypatch.setenv("SEED_HR_PASSWORD", "a-development-password")
+    settings = Settings()
+    for rendering in (str(settings), repr(settings), str(settings.model_dump())):
+        assert "a-development-password" not in rendering

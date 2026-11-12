@@ -179,6 +179,60 @@ key, and again whenever the provider, model or key changes.
 
 The rest of the stack runs without a key — only the embedding path needs it.
 
+### 6. Sign-in accounts
+
+Two synthetic accounts, one per role, so you can see both halves of the
+application. Pick a password for each in your own `.env`:
+
+```
+SEED_EMPLOYEE_PASSWORD=
+SEED_HR_PASSWORD=
+```
+
+There is deliberately no default. A password written into a tracked file is
+a password every checkout of this repository shares, so `.env.example` names
+the two variables and leaves them empty — and a test fails if a value ever
+appears next to one. Then create the accounts:
+
+```bash
+python scripts/seed_accounts.py
+```
+
+| Account | Address | Role |
+| --- | --- | --- |
+| Alex Rivera | `employee@onboardai.example` | Employee |
+| Jordan Blake | `hr@onboardai.example` | HR administrator |
+
+Both addresses end in `.example`, which RFC 2606 reserves, so a demo account
+can never reach a real mailbox. Run the script again any time to reset the
+accounts — it resets rather than failing, which is what you want after
+dropping the database or forgetting a password. It never prints a password,
+and `python scripts/seed_accounts.py --list` shows what it would create
+without touching the database.
+
+Logging in returns a signed token that lasts one working day. You can also
+set a signing key, which keeps you signed in across backend restarts:
+
+```
+AUTH_SECRET_KEY=generate-your-own
+```
+
+Generate one with `python -c "import secrets; print(secrets.token_urlsafe(48))"`.
+Leave it unset in development and the backend signs with a random key made
+at startup and says so in the log; set `ONBOARDAI_ENV=production` and it
+refuses to start without one. Like the embedding key, it is server-side
+only: never in `frontend/.env`, never in a `VITE_` variable, never in a
+commit.
+
+Passwords are stored as scrypt hashes with the cost parameters written into
+each hash, so the cost can be raised later without locking anybody out — see
+the module docstring in
+[`backend/app/services/auth/passwords.py`](backend/app/services/auth/passwords.py)
+for why these parameters. Two things the alpha does not do are recorded as
+[TD-19](TECHNICAL-DEBT.md#td-19--a-login-token-cannot-be-withdrawn-once-issued)
+and
+[TD-20](TECHNICAL-DEBT.md#td-20--nothing-limits-failed-login-attempts).
+
 ## Tests and lint
 
 **Backend** (from `backend/`, with the virtual environment active):
@@ -258,6 +312,7 @@ backend/
     db/           Main Database (PostgreSQL) engine, session and tables
     services/     Auth, Document Upload, Logging, Escalation, QA Controller,
                   Retrieval, Embedding Client, LLM Gateway
+      auth/       password hashing, login tokens, the seeded accounts
     vectorstore/  Vector Database (ChromaDB) client
     config.py     settings, read from the environment
     main.py       application factory
