@@ -18,9 +18,9 @@ See [How to add an entry](#how-to-add-an-entry).
 | ID | Debt | Area | Status |
 | --- | --- | --- | --- |
 | [TD-01](#td-01--the-mock-llm-is-the-default-provider) | The Mock LLM is the default provider | AI Chatbot Module | Open |
-| [TD-02](#td-02--no-ci-pipeline) | No CI pipeline | Build | Open |
+| [TD-02](#td-02--no-ci-pipeline) | No CI pipeline | Build | Mitigated |
 | [TD-03](#td-03--no-health-or-readiness-endpoint) | No health or readiness endpoint | Backend API | Accepted |
-| [TD-04](#td-04--the-integration-tests-are-opt-in) | The integration tests are opt-in | Testing | Open |
+| [TD-04](#td-04--the-integration-tests-are-opt-in) | The integration tests are opt-in | Testing | Mitigated |
 | [TD-05](#td-05--generated-pdfs-are-committed) | Generated PDFs are committed | Data | Accepted |
 | [TD-06](#td-06--the-chroma-client-and-server-versions-are-coupled-by-hand) | The Chroma client and server versions are coupled by hand | Storage | Open |
 | [TD-07](#td-07--python-314-is-not-supported) | Python 3.14 is not supported | Build | Open |
@@ -30,7 +30,8 @@ See [How to add an entry](#how-to-add-an-entry).
 | [TD-11](#td-11--the-watcher-parses-test-output-with-regular-expressions) | The watcher parses test output with regular expressions | Tooling | Accepted |
 | [TD-12](#td-12--the-jira-board-snapshot-is-only-as-fresh-as-the-last-sync) | The Jira board snapshot is only as fresh as the last sync | Tooling | Accepted |
 | [TD-13](#td-13--nothing-automated-proves-the-embedding-api-still-answers) | Nothing automated proves the Embedding API still answers | AI Chatbot Module | Open |
-| [TD-14](#td-14--the-token-gallery-is-kept-out-of-the-build-by-convention) | The token gallery is kept out of the build by convention | Frontend | Open |
+| [TD-14](#td-14--the-token-gallery-is-kept-out-of-the-build-by-convention) | The token gallery is kept out of the build by convention | Frontend | Mitigated |
+| [TD-15](#td-15--the-pipeline-has-no-deployment-stage) | The pipeline has no deployment stage | Build | Accepted |
 
 Status is **Open** (we intend to pay it back), **Accepted** (we have decided
 to live with it, and the entry says why), or **Mitigated** (paid back; kept
@@ -63,7 +64,7 @@ about answer quality is supportable.
 
 ### TD-02 — No CI pipeline
 
-**Taken:** 11 November 2026, in ON-9 · **Status:** Open · **Ticket:** ON-49
+**Taken:** 11 November 2026, in ON-9 · **Status:** Mitigated · **Ticket:** ON-49
 
 **What.** Tests and lint run only on developer machines. Nothing runs
 automatically on a pull request.
@@ -76,9 +77,17 @@ The board rule that a ticket is Done when "CI is green" currently degrades to
 Linux, so a Windows-only assumption could reach `main` unnoticed — the kind
 of thing that surfaces at the worst moment.
 
-**Mitigation.** ON-49. Until it exists, every ticket records in its Jira
-comment exactly which commands were run and what passed, so the evidence is
-at least written down.
+**Mitigation.** Paid back in ON-49. `.github/workflows/ci.yml` runs on every
+push and every pull request: a backend job (ruff, ruff format, the unit
+tests), a frontend job (oxlint, vitest, `tsc -b && vite build`) and an
+integration job with PostgreSQL and ChromaDB service containers. Both jobs
+run on Linux, which is the point — development happens on Windows.
+
+**Left over.** Nothing enforces that the checks have actually run before a
+merge. Branch protection requiring the three jobs is a repository setting,
+not a file in the repository, so it is Jared's to turn on; until he does, the
+pipeline reports but does not block. See also TD-15: there is no deployment
+stage.
 
 ---
 
@@ -106,7 +115,7 @@ quietly.
 
 ### TD-04 — The integration tests are opt-in
 
-**Taken:** 11 November 2026, in ON-9 · **Status:** Open · **Ticket:** ON-49
+**Taken:** 11 November 2026, in ON-9 · **Status:** Mitigated · **Ticket:** ON-49
 
 **What.** `backend/pyproject.toml` sets `addopts = "-m 'not integration'"`, so
 the tests that talk to PostgreSQL and ChromaDB are deselected by default. They
@@ -119,9 +128,12 @@ without Docker running.
 run unless someone remembers the flag. They can break and stay broken without
 anyone noticing, which is the worst property a test can have.
 
-**Mitigation.** ON-49 should run them as a separate job with service
-containers, so they are exercised on every pull request even though they stay
-out of the fast local suite.
+**Mitigation.** Paid back in ON-49. The `integration` job in
+`.github/workflows/ci.yml` starts PostgreSQL and ChromaDB as service
+containers on the image versions `docker-compose.yml` pins, applies the
+migration with `alembic upgrade head`, and runs `pytest -m integration`. They
+stay deselected locally, so the fast suite is still fast and Docker is still
+optional on a developer machine, but they can no longer break unnoticed.
 
 ---
 
@@ -367,7 +379,7 @@ only we can do that.
 
 ### TD-14 — The token gallery is kept out of the build by convention
 
-**Taken:** 11 November 2026, in ON-63 · **Status:** Open · **Ticket:** ON-63
+**Taken:** 11 November 2026, in ON-63 · **Status:** Mitigated · **Ticket:** ON-49
 
 **What.** The development token gallery is excluded from the production
 bundle by two source-level conventions rather than by a check on the build
@@ -392,6 +404,31 @@ alpha.
 `dist/assets/*.css`, and the stylesheet dropped from 6.25 kB to 4.18 kB once
 the `?inline` import replaced the plain one.
 
-**Mitigation.** ON-49 adds the CI pipeline. Add a job step there that runs
-`npm run build` and greps `dist/` for a marker string from the gallery, which
-turns both conventions into one check on the artefact that actually ships.
+**Mitigation.** Paid back in ON-49, one ticket later. The frontend job builds
+and then greps `dist/` for `gallery-swatch`, failing the run if it is there.
+That is a check on the artefact that actually ships, so it catches a third
+way of leaking the gallery as well as the two the source-level tests know
+about.
+
+---
+
+### TD-15 — The pipeline has no deployment stage
+
+**Taken:** 11 November 2026, in ON-49 · **Status:** Accepted · **Ticket:** ON-49
+
+**What.** ON-49 asks for build, automated tests and deployment. The pipeline
+does the first two. It ends by uploading the built frontend as a run
+artefact; nothing is deployed anywhere.
+
+**Why.** There is no environment to deploy to. The alpha is run locally from
+the README, the backend needs PostgreSQL and ChromaDB, and no hosting has
+been chosen or paid for. A deploy step pointing at nothing would be a green
+check that means nothing, which is worse than an absent one.
+
+**Impact.** "CD" in the pipeline's name is aspirational. Nobody can install
+the alpha from a URL; a reviewer follows the README. The build artefact is
+the closest thing to a release and expires after 7 days.
+
+**Mitigation.** Accepted for the alpha. If a host is chosen later, the
+frontend job already produces the artefact a deploy step would publish, and
+the backend would need a container image, which does not exist yet either.
