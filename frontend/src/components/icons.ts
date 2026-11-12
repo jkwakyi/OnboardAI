@@ -19,12 +19,16 @@ export {
   Info,
   Inbox,
   LoaderCircle,
+  LogOut,
   MessageSquare,
   Plus,
   Quote,
   RefreshCw,
+  SearchX,
+  ShieldAlert,
   TriangleAlert,
   Upload,
+  UserRound,
   X,
 } from 'lucide-react'
 

@@ -1,0 +1,110 @@
+/*
+ * The left rail (ON-65).
+ */
+
+.rail {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: var(--space-5);
+  width: var(--rail-width);
+  padding: var(--space-5) var(--space-4);
+  overflow-y: auto;
+  border-inline-end: var(--border-width) solid var(--border);
+  background: var(--surface-1);
+}
+
+/* Plain text, deliberately: the epic rules out product branding, and the
+   app name is not a logo. */
+.rail__name {
+  color: var(--text);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+}
+
+.rail__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.rail__group-title {
+  margin: 0;
+}
+
+.rail__links {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+}
+
+.rail__link {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width) solid transparent;
+  border-radius: var(--radius-input);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  text-decoration: none;
+  transition: background-color var(--transition), color var(--transition);
+}
+
+.rail__link:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+/* The active route wears its own section's accent, which is how a screen
+   says where it is without a second label. aria-current carries the same
+   fact to anyone who cannot see it. */
+.rail__link--active {
+  border-color: var(--accent-soft);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.rail__icon {
+  flex: none;
+  width: var(--icon-size-sm);
+  height: var(--icon-size-sm);
+}
+
+.rail__user {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+
+  /* Pushes the block to the bottom however short the navigation is. */
+  margin-block-start: auto;
+  padding-block-start: var(--space-4);
+  border-block-start: var(--border-width) solid var(--border);
+}
+
+.rail__avatar {
+  flex: none;
+  width: var(--icon-size-md);
+  height: var(--icon-size-md);
+  color: var(--text-muted);
+}
+
+.rail__who {
+  flex: 1;
+  min-width: 0;
+}
+
+.rail__full-name {
+  overflow: hidden;
+  color: var(--text);
+  font-size: var(--text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rail__role {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}

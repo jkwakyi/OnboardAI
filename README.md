@@ -136,13 +136,19 @@ npm run dev
 
 The app is at <http://localhost:5173>.
 
+There is no sign-in yet: the Auth Service is ON-36 and the login form is
+ON-38. Until then the login page offers two buttons that sign you in as an
+Employee or an HR administrator so the interface can be used. They exist in
+`npm run dev` only and are not in a production build.
+
 All styling comes from the design tokens in
 `frontend/src/styles/tokens.css` — no component contains a colour or a
 measurement. Pages are built from the shared components in
-`frontend/src/components/`. Two development pages show the lot:
+`frontend/src/components/`, inside the app shell in `frontend/src/shell/`.
+Two development pages show the parts on their own:
 <http://localhost:5173/#tokens> for the tokens and
 <http://localhost:5173/#components> for every component in every state.
-Both, and the measured contrast ratios, are documented in
+All of it, and the measured contrast ratios, are documented in
 [`frontend/README.md`](frontend/README.md#design-tokens).
 
 ### 5. Embedding API key
@@ -261,6 +267,8 @@ frontend/
   src/
     styles/       design tokens and base styles
     components/   the shared UI component library
+    shell/        the app shell, the route table and the route guards
+    session/      who is signed in, and the two roles
     dev/          the development token and component galleries
   README.md       how the interface is put together
 data/
