@@ -27,5 +27,11 @@
   },
   "include": [
     "src"
+  ],
+  "//": "Tests live in tsconfig.test.json, which adds the Node types they need. Keeping them out here is what stops a component importing node:fs.",
+  "exclude": [
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/test"
   ]
 }

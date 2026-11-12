@@ -39,3 +39,7 @@ Thumbs.db
 
 # Development watcher runtime state (never committed)
 .watch/
+
+# Per-developer Claude Code settings. .claude/launch.json is shared on
+# purpose: it is how the dev server is started from the editor.
+.claude/settings.local.json
