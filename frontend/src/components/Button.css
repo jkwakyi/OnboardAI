@@ -123,8 +123,16 @@
   cursor: not-allowed;
 }
 
-/* After :disabled, because a loading button is also disabled and this is
-   the more accurate of the two cursors. */
+/*
+ * After :disabled, because a loading button is also a disabled one - but it
+ * is unavailable for a different reason, and it should not look the same.
+ * Dimmed to 45% it reads as "you cannot do this", the spinner is hard to
+ * make out, and the label it is still showing goes grey for no reason. Full
+ * strength and a progress cursor say "working" instead, while the disabled
+ * attribute still does the only thing that matters: refuse the second
+ * press.
+ */
 .oa-button--loading {
+  opacity: 1;
   cursor: progress;
 }
