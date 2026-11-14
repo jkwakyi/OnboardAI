@@ -286,6 +286,36 @@ changes nothing the server will honour.
 
 ### Uploading a document
 
+From the interface, sign in as the HR administrator and open **Documents**.
+Drop a PDF or TXT on the dropzone, or click to browse, and press Upload.
+The ring counts the bytes going out; when they are all up it changes to
+"Reading …", because the server extracts the text and splits it into
+sections before it answers, and a bar sitting at 100% while that happens
+reads as a hung page.
+
+What a success says is deliberately narrow: **the file is stored and its
+text has been read and split into sections**, and answering questions from
+it also needs the Embedding API, which is not connected yet (ON-41, waiting
+on ON-10). It does not say "searchable", because nothing can reach the
+document yet and that would be the most useful-sounding lie the page could
+tell.
+
+A file the browser can already tell is wrong — not a PDF or TXT, or empty —
+is refused without a request being made. A file the server refuses shows
+the server's own wording, and a **Try again** button appears only when
+trying again could work: a 500, a 429 or an unreachable server get one, a
+413, 415, 422 or 400 do not, because those are properties of the file and
+it will be refused identically next time.
+
+There is no list of uploaded documents and no way to delete one, because
+`GET /api/documents` and `DELETE /api/documents/{id}` are ON-16 and do not
+exist on the server yet — see
+[TD-25](TECHNICAL-DEBT.md#td-25--the-admin-upload-page-uses-one-of-its-three-endpoints).
+An upload in progress cannot be cancelled either:
+[TD-26](TECHNICAL-DEBT.md#td-26--an-upload-cannot-be-cancelled).
+
+Or with `curl`:
+
 ```bash
 curl -X POST http://localhost:8000/api/documents -H "Authorization: Bearer $TOKEN" -F "file=@data/handbook/benefits.pdf"
 ```
@@ -444,10 +474,16 @@ is a fault that never ran, and "13/19 caught, 6 skipped" reads a lot like a
 pass. The faults for a ticket live in `tools/inject/faults/` as data, so
 the next person can re-run them.
 
-This has earned its place. Across ON-39 to ON-45 it caught, among others, a
+A frontend faults file adds `RUNNER = "vitest"` and `ROOT = "frontend"`;
+the harness runs whatever `TESTS` names and a non-zero exit is a non-zero
+exit either way.
+
+This has earned its place. Across ON-39 to ON-42 it caught, among others, a
 size limit that read the whole upload before checking it, a 20-second
-timeout that waited out the provider anyway, and four tests of mine that
-were passing without testing their subject.
+timeout that waited out the provider anyway, and ten tests of mine that
+were passing without testing their subject — including three that spied on
+`window.sessionStorage`, which in jsdom is a Proxy, so the spy attached and
+intercepted nothing while the tests went green either way.
 
 ## Watching a build
 
