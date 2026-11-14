@@ -37,6 +37,7 @@ See [How to add an entry](#how-to-add-an-entry).
 | [TD-18](#td-18--the-session-is-a-development-stub-and-a-refresh-signs-you-out) | The session is a development stub and a refresh signs you out | Frontend | Accepted |
 | [TD-19](#td-19--a-login-token-cannot-be-withdrawn-once-issued) | A login token cannot be withdrawn once issued | Backend API | Accepted |
 | [TD-20](#td-20--nothing-limits-failed-login-attempts) | Nothing limits failed login attempts | Backend API | Mitigated |
+| [TD-21](#td-21--auth-check-guards-routes-not-rows) | Auth Check guards routes, not rows | Backend API | Open |
 
 Status is **Open** (we intend to pay it back), **Accepted** (we have decided
 to live with it, and the entry says why), or **Mitigated** (paid back; kept
@@ -623,3 +624,37 @@ quietly.
 
 scrypt's cost remains the floor underneath all of it: the same parameter
 that protects a stolen password table also prices an online guess.
+
+---
+
+### TD-21 — Auth Check guards routes, not rows
+
+**Taken:** 14 November 2026, in ON-14 · **Status:** Open · **Ticket:** ON-16
+
+**What.** Auth Check answers one question: may *this role* reach *this
+endpoint*. It does not ask whether this particular person may see this
+particular record. `GET /api/escalations` is open to both roles because the
+contracts put both the HR Inbox Page and the Chat Page on it — so as things
+stand, any employee's token reaches the endpoint that lists escalations,
+and nothing at the door distinguishes their own from everybody else's.
+
+**Why.** The architecture diagram puts Auth Check in front of the API, where
+it sees a method and a path and no data. Deciding which rows come back means
+reading them first, which happens inside the endpoint. Teaching the door to
+reason about rows would mean either querying the database twice or moving
+the endpoint's logic into the door, and both are worse than the gap.
+
+**Impact.** Until the escalation endpoints filter, an employee who calls
+`GET /api/escalations` directly — not through the Chat Page, which will ask
+only for their own — would see other employees' questions to HR. Those are
+exactly the questions somebody was uncomfortable enough about to escalate.
+Nothing in the alpha surfaces this in the interface, which makes it the kind
+of gap that is found by a reviewer with curl rather than by a user.
+
+**Mitigation.** ON-16 builds `GET /api/escalations` and owns the filter: an
+Employee's token gets their own escalations, an HR administrator's gets all
+of them, decided from `claims.user_id` and `claims.role` which Auth Check
+has already verified and left on the request. ON-21's HR Inbox reads the
+same endpoint. Until that lands the endpoint does not exist at all, so the
+gap is real but not yet reachable — which is the one good reason to write it
+down now rather than discover it later.
