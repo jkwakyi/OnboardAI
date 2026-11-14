@@ -34,12 +34,13 @@ See [How to add an entry](#how-to-add-an-entry).
 | [TD-15](#td-15--the-pipeline-has-no-deployment-stage) | The pipeline has no deployment stage | Build | Accepted |
 | [TD-16](#td-16--every-components-css-ships-used-or-not) | Every component's CSS ships, used or not | Frontend | Accepted |
 | [TD-17](#td-17--citationchip-is-a-button-that-does-nothing-yet) | CitationChip is a button that does nothing yet | Frontend | Accepted |
-| [TD-18](#td-18--the-session-is-a-development-stub-and-a-refresh-signs-you-out) | The session is a development stub and a refresh signs you out | Frontend | Accepted |
+| [TD-18](#td-18--the-session-is-a-development-stub-and-a-refresh-signs-you-out) | The session is a development stub and a refresh signs you out | Frontend | Mitigated |
 | [TD-19](#td-19--a-login-token-cannot-be-withdrawn-once-issued) | A login token cannot be withdrawn once issued | Backend API | Accepted |
 | [TD-20](#td-20--nothing-limits-failed-login-attempts) | Nothing limits failed login attempts | Backend API | Mitigated |
 | [TD-21](#td-21--auth-check-guards-routes-not-rows) | Auth Check guards routes, not rows | Backend API | Open |
 | [TD-22](#td-22--nothing-inspects-what-is-inside-an-uploaded-document) | Nothing inspects what is inside an uploaded document | Backend API | Mitigated |
 | [TD-23](#td-23--the-20-second-timeout-stops-the-wait-not-the-call) | The 20-second timeout stops the wait, not the call | AI Chatbot Module | Accepted |
+| [TD-24](#td-24--the-login-token-is-readable-by-script-on-the-page) | The login token is readable by script on the page | Frontend | Accepted |
 
 Status is **Open** (we intend to pay it back), **Accepted** (we have decided
 to live with it, and the entry says why), or **Mitigated** (paid back; kept
@@ -523,7 +524,7 @@ something, which is a one-line change in `CitationChip.tsx`.
 
 ### TD-18 — The session is a development stub and a refresh signs you out
 
-**Taken:** 12 November 2026, in ON-65 · **Status:** Accepted · **Ticket:** ON-38
+**Taken:** 12 November 2026, in ON-65 · **Status:** Mitigated · **Ticket:** ON-38
 
 **What.** There is no real sign-in. The login page offers two buttons —
 Continue as Employee, Continue as HR administrator — that put a made-up
@@ -548,13 +549,27 @@ are real but they guard a fiction: until ON-38, nothing has ever checked a
 password, and until Auth Check sees a token, nothing has enforced a role
 anywhere that matters.
 
-**Mitigation.** ON-38 builds the real login form against
-`POST /api/auth/login` and owns token handling; it maps the response onto the
-same `Session` and calls the same `signIn`, so the shell does not change. The
-stub is behind the literal `import.meta.env.DEV`, which Vite replaces with
-`false` at build time, so the buttons are dead code the bundler drops rather
-than a password-free way into a shipped build. The CI job greps `dist/` for
-them, and a test fails if the guard is removed from the source.
+**Mitigation.** *14 November 2026, ON-38:* paid back, and not quite the way
+this entry predicted.
+
+The real form is in, against `POST /api/auth/login`. The two development
+buttons were **deleted** rather than left behind the `import.meta.env.DEV`
+literal: a password-free way in that only works in development is still a
+password-free way in that somebody eventually ships, and there is now a real
+Auth Service to sign in against. The CI grep for `"Continue as Employee"`
+went with them, and the test that asserted the literal was present now
+asserts the opposite — that nothing in the login page skips the password.
+
+The refresh is fixed too, by `sessionStorage` rather than by the in-memory
+session this entry described. What that costs is **TD-24**.
+
+One prediction here was wrong and worth noting: this entry said ON-38 would
+map the login response onto "the same `Session`". It did not. The endpoint
+returns the token and nothing else, so the session is now *derived* from the
+token rather than stored next to it — one piece of state instead of two,
+because two can disagree, and the way they disagree is an interface showing
+somebody as signed in while the header carries a token the server has
+stopped accepting.
 
 ---
 
@@ -751,3 +766,50 @@ A note on how this was found: the first version used
 — so the pool joined the very thread the timeout had just given up on, and
 the Gateway returned only once the provider did. The limit was not a limit,
 and it read as correct. Only a test that measured the wall clock noticed.
+
+---
+
+### TD-24 — The login token is readable by script on the page
+
+**Taken:** 14 November 2026, in ON-38 · **Status:** Accepted · **Ticket:** none
+
+**What.** The login token is kept in `sessionStorage` and attached to each
+request as an `Authorization: Bearer` header. Anything running as script on
+the page can read it — so a cross-site scripting hole anywhere in the
+frontend is also a session theft, for as long as the token lasts.
+
+**Why.** It was a choice between three imperfect options. In memory only is
+what ON-65 shipped and TD-18 is the complaint about it: a refresh signs you
+out, which during a demo means losing your place whenever somebody reloads.
+`localStorage` fixes the refresh and also survives closing the browser, on a
+shared machine, until the token expires. `sessionStorage` fixes the refresh
+and dies with the tab, which is the narrowest window that addresses the
+actual complaint.
+
+The textbook answer is an `httpOnly` cookie the page's JavaScript cannot
+read. That needs the backend to set and clear cookies, and it brings CSRF
+protection into scope — a second mechanism, on a deadline, for a demo that
+is not on the public internet. It is also a slightly different reading of
+the contracts, which say the API Client "sends requests with the login
+token": a header is the natural reading of that sentence and a cookie is
+not.
+
+**Impact.** One XSS anywhere in the React application — a dependency, a
+rendered-as-HTML string, a future page that interpolates a document name —
+gives up a working session. The token carries the holder's role, so an HR
+administrator's stolen token is HR access to upload and delete documents and
+to read every escalation. There is no revocation (TD-19), so the thief has
+it until it expires.
+
+**Mitigation.** The window is the mitigation, and it is a real one rather
+than a comforting one: the token lasts one working day (TD-19) and the
+storage dies with the tab, so a token cannot be picked up from a machine
+somebody walked away from once the browser is closed. React escapes
+interpolated text by default, and nothing in the frontend uses
+`dangerouslySetInnerHTML` — worth keeping true, and worth a lint rule if it
+ever stops being obvious. Nothing is stored except the token: a test asserts
+the password appears in no storage, no URL and no rendered markup.
+
+If this moves past an alpha, the cookie is the answer, and it should be
+decided alongside TD-19's revocation rather than separately — the two are
+the same conversation about what a session is.

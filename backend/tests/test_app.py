@@ -80,3 +80,91 @@ def test_openapi_schema_generates(client):
     response = client.get("/openapi.json")
     assert response.status_code == 200
     assert response.json()["info"]["title"] == "OnboardAI"
+
+
+# --- the browser may call this API (ON-38) -----------------------------
+
+
+def test_the_frontend_origin_is_allowed(client):
+    """Without this every request from the React app is blocked before it
+    is sent, and the failure reads as "the server could not be reached".
+
+    Found by driving the real browser, not by a test: every frontend test
+    stubs fetch, and the browser is the only thing that enforces the rule.
+    """
+    response = client.options(
+        "/api/auth/login",
+        headers={
+            "Origin": "http://localhost:5173",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "content-type",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "http://localhost:5173"
+
+
+def test_the_port_vite_moves_to_is_allowed_as_well(client):
+    """Vite takes 5174 when 5173 is busy, which happens whenever a second
+    dev server is already running."""
+    response = client.options(
+        "/api/auth/login",
+        headers={
+            "Origin": "http://localhost:5174",
+            "Access-Control-Request-Method": "POST",
+        },
+    )
+
+    assert response.headers["access-control-allow-origin"] == "http://localhost:5174"
+
+
+def test_an_origin_nobody_configured_is_not_allowed(client):
+    response = client.options(
+        "/api/auth/login",
+        headers={
+            "Origin": "https://not-our-app.example",
+            "Access-Control-Request-Method": "POST",
+        },
+    )
+
+    assert "access-control-allow-origin" not in response.headers
+
+
+def test_the_authorization_header_may_be_sent(client):
+    """The API Client sends the login token with every request. A browser
+    will not send that header cross-origin unless it is allowed here."""
+    response = client.options(
+        "/api/auth/login",
+        headers={
+            "Origin": "http://localhost:5173",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "authorization",
+        },
+    )
+
+    allowed = response.headers.get("access-control-allow-headers", "").lower()
+    assert "authorization" in allowed
+
+
+def test_retry_after_is_readable_by_the_browser(client):
+    """Cross-origin, a browser hides every response header except a short
+    safelist unless the server says otherwise - so the login page could
+    not tell how long the attempt limit has to run.
+
+    Checked on a real response rather than the preflight, because
+    Access-Control-Expose-Headers is only sent on the former. An empty body
+    is a 422 from request validation, which never reaches the database.
+    """
+    response = client.post("/api/auth/login", json={}, headers={"Origin": "http://localhost:5173"})
+
+    assert response.status_code == 422
+    assert "retry-after" in response.headers.get("access-control-expose-headers", "").lower()
+
+
+def test_no_origin_is_a_wildcard():
+    """A wildcard says any site may call this API with whatever token the
+    person holding it has."""
+    from app.config import Settings
+
+    assert "*" not in Settings().allowed_origins
