@@ -41,6 +41,8 @@ See [How to add an entry](#how-to-add-an-entry).
 | [TD-22](#td-22--nothing-inspects-what-is-inside-an-uploaded-document) | Nothing inspects what is inside an uploaded document | Backend API | Mitigated |
 | [TD-23](#td-23--the-20-second-timeout-stops-the-wait-not-the-call) | The 20-second timeout stops the wait, not the call | AI Chatbot Module | Accepted |
 | [TD-24](#td-24--the-login-token-is-readable-by-script-on-the-page) | The login token is readable by script on the page | Frontend | Accepted |
+| [TD-25](#td-25--the-admin-upload-page-uses-one-of-its-three-endpoints) | The Admin Upload Page uses one of its three endpoints | Frontend | Open |
+| [TD-26](#td-26--an-upload-cannot-be-cancelled) | An upload cannot be cancelled | Frontend | Open |
 
 Status is **Open** (we intend to pay it back), **Accepted** (we have decided
 to live with it, and the entry says why), or **Mitigated** (paid back; kept
@@ -813,3 +815,76 @@ the password appears in no storage, no URL and no rendered markup.
 If this moves past an alpha, the cookie is the answer, and it should be
 decided alongside TD-19's revocation rather than separately — the two are
 the same conversation about what a session is.
+
+---
+
+### TD-25 — The Admin Upload Page uses one of its three endpoints
+
+**Taken:** 14 November 2026, in ON-42 · **Status:** Open · **Ticket:** ON-16
+
+**What.** The Interface Contracts give the Admin Upload Page three
+endpoints: `POST /api/documents`, `GET /api/documents` and
+`DELETE /api/documents/{id}`. The page built in ON-42 uses the first one.
+There is no list of what has been uploaded and no way to remove anything,
+because neither endpoint exists on the server yet — only POST is
+implemented.
+
+**Why.** Listing and deleting are ON-16, which is blocked behind ON-15.
+Writing the client functions now would mean shipping two calls that return
+404, which is worse than their absence: a function that exists looks
+callable, and the next person to need a document list would find one and
+wire a page to it. So `api/documents.ts` has one function and says in its
+own header why.
+
+**Impact.** An HR administrator can upload a document and is told what
+happened to it, and then has no way to see it again. Uploading the same
+file twice produces two documents with no indication that the first one is
+already there, and nothing in the interface can undo either. For the alpha
+the upload is the demonstrable half of U1 to U4; for anybody actually
+curating a policy library it is half a feature.
+
+**Mitigation.** None in the interface, deliberately — a list the page
+assembled from its own successful uploads would be a list that empties on
+refresh and disagrees with the database, which is a worse answer than no
+list. The server is the only thing that knows what documents exist, and it
+will say so when ON-16 lands. Until then `scripts/` and `psql` are how
+somebody checks, which is acceptable for a development database and not
+acceptable for a user.
+
+---
+
+### TD-26 — An upload cannot be cancelled
+
+**Taken:** 14 November 2026, in ON-42 · **Status:** Open · **Ticket:** none
+
+**What.** `uploadWithProgress` takes an `AbortSignal` and honours it: it
+aborts the request, stops listening, and rejects with an `AbortError` the
+same way `fetch` does. The page passes no signal and offers no Cancel
+button. So a large upload runs to completion whether or not anybody still
+wants it, and navigating away from the page mid-upload leaves the request
+going and its answer discarded.
+
+**Why.** The cancel path is the easy half; deciding what a cancelled
+upload *means* is not. The server does U2 and U3 in one request — it saves
+the file, extracts the text and writes the sections before it answers — so
+aborting after the last byte has gone out does not stop any of that. It
+only stops this page hearing the result. A Cancel button that leaves a
+document saved and indexed, while telling the person their upload was
+cancelled, is a worse lie than no button. Doing it properly needs either a
+`DELETE` to undo it (TD-25, ON-16) or a server that treats a dropped
+connection as a reason to discard the upload, and neither is in this
+ticket.
+
+**Impact.** Somebody who picks the wrong 40 MB file waits for it. On a slow
+connection that is a real wait with no way out but a browser reload, which
+has the same problem — the bytes already sent still arrive, and the
+document may well be stored. The capability is tested and present in the
+transport, so the gap is in the page, not in the plumbing.
+
+**Mitigation.** The size limit is the practical bound: the server refuses
+anything over `MAX_UPLOAD_BYTES` and the browser stops sending as soon as
+it is told to, so the worst wait is bounded by that limit rather than by
+the file somebody chose. The abort path is covered by tests
+(`api/upload.test.ts`) rather than left to rot, so wiring a button is a
+small change when the question above has an answer — which it will have
+once `DELETE /api/documents/{id}` exists.

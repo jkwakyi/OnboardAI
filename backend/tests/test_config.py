@@ -168,3 +168,27 @@ def test_printing_the_settings_does_not_print_a_seed_password(monkeypatch):
     settings = Settings()
     for rendering in (str(settings), repr(settings), str(settings.model_dump())):
         assert "a-development-password" not in rendering
+
+
+def test_the_suite_does_not_read_the_developers_env_file():
+    """Guards `ignore_the_developers_env_file` in conftest.
+
+    Without that fixture a test cannot make a setting absent: clearing the
+    environment variable leaves pydantic-settings reading the value
+    straight out of `.env`. Two seeding tests passed for months on that
+    basis and failed the moment somebody configured the project the way the
+    README tells them to, so the isolation is worth a test of its own
+    rather than an autouse fixture nobody notices is gone.
+    """
+    assert Settings.model_config["env_file"] == ()
+
+
+def test_a_cleared_variable_is_actually_absent(monkeypatch):
+    """The point of the isolation, stated as behaviour.
+
+    `Settings()` here, not `Settings(_env_file=None)`: a test that opts out
+    by hand proves nothing about the tests that do not.
+    """
+    monkeypatch.delenv("SEED_HR_PASSWORD", raising=False)
+
+    assert Settings().seed_hr_password is None
