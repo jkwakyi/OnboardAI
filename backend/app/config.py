@@ -75,6 +75,12 @@ class Settings(BaseSettings):
     password_scrypt_r: int = 8
     password_scrypt_p: int = 5
 
+    # Document upload (ON-39). Applied while writing rather than read off
+    # the Content-Length header, which the client also sets. 10 MB is far
+    # past any HR policy document and well short of anything that would
+    # fill a disk by accident.
+    max_upload_bytes: int = 10 * 1024 * 1024
+
     # Login API (ON-37): how often one address, or one client, may fail
     # before being asked to wait. Checked before any password hashing, so
     # it limits both guessing and the CPU a caller can make the server
