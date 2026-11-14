@@ -38,7 +38,7 @@ See [How to add an entry](#how-to-add-an-entry).
 | [TD-19](#td-19--a-login-token-cannot-be-withdrawn-once-issued) | A login token cannot be withdrawn once issued | Backend API | Accepted |
 | [TD-20](#td-20--nothing-limits-failed-login-attempts) | Nothing limits failed login attempts | Backend API | Mitigated |
 | [TD-21](#td-21--auth-check-guards-routes-not-rows) | Auth Check guards routes, not rows | Backend API | Open |
-| [TD-22](#td-22--nothing-inspects-what-is-inside-an-uploaded-document) | Nothing inspects what is inside an uploaded document | Backend API | Accepted |
+| [TD-22](#td-22--nothing-inspects-what-is-inside-an-uploaded-document) | Nothing inspects what is inside an uploaded document | Backend API | Mitigated |
 
 Status is **Open** (we intend to pay it back), **Accepted** (we have decided
 to live with it, and the entry says why), or **Mitigated** (paid back; kept
@@ -664,7 +664,7 @@ down now rather than discover it later.
 
 ### TD-22 — Nothing inspects what is inside an uploaded document
 
-**Taken:** 14 November 2026, in ON-39 · **Status:** Accepted · **Ticket:** ON-40
+**Taken:** 14 November 2026, in ON-39 · **Status:** Mitigated · **Ticket:** ON-40
 
 **What.** An upload is checked three ways — it begins `%PDF-` or contains no
 NUL bytes, it is not empty, and it is under the size limit — and then it is
@@ -685,10 +685,17 @@ of memory when ON-40 opens it, in-process, with no timeout. That is a denial
 of service available to anybody holding an HR administrator token, which for
 the alpha means anybody holding the seeded HR password.
 
-**Mitigation.** The size limit is the only real bound today, and it is a
-bound on input rather than on work. ON-40 owns the other half and should
-decide, when it picks a parser, what happens to a file that will not parse
-in reasonable time — the smallest honest version is a page cap and a wall
-clock, matching how the LLM Gateway's 20-second timeout treats a provider
-that will not answer. Until then: do not point this endpoint at the public
-internet, which the alpha does not.
+**Mitigation.** *14 November 2026, ON-40:* the other half is in. Extraction
+stops at three bounds and says which one it hit — `PDF_MAX_PAGES` (200),
+`EXTRACTION_MAX_CHARACTERS` (one million) and `EXTRACTION_TIMEOUT_SECONDS`
+(15), the last checked **per page** rather than once at the end, because the
+point is to stop doing the work rather than to find out afterwards that it
+was done. A page that will not parse is skipped with a log line instead of
+failing the document; a PDF that will not open at all, or that has no text
+layer, is a `422` and the upload is undone.
+
+What is still true is the first sentence of **What**: nothing scans an
+upload for malware, and nothing will before the alpha. The bound is on what
+parsing may cost, not on what the file may contain. The endpoint remains
+HR-only and the alpha is not on the public internet, which is what makes
+that acceptable rather than merely convenient.
