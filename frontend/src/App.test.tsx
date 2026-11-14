@@ -32,9 +32,7 @@ describe('App', () => {
   it('sends somebody who is not signed in to the login page', () => {
     renderAt('/chat')
 
-    expect(
-      screen.getByText('Sign in as either role to look at the shell.', { exact: false }),
-    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument()
   })
 
   it('renders without third-party template assets', () => {

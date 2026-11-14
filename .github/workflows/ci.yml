@@ -107,11 +107,16 @@ jobs:
       # each gallery's stylesheet defines, and the label on the stubbed
       # sign-in, which would otherwise be a way into the alpha with no
       # password (TD-18).
+      # "Continue as Employee" was here until ON-38. It guarded the
+      # development sign-in buttons ON-65 shipped behind
+      # import.meta.env.DEV, which mattered because unlike a leaked
+      # gallery that was a way in with no password. ON-38 deleted them, so
+      # the marker now guards nothing; the galleries still need theirs.
       - name: Development-only code is not in the build
         working-directory: frontend
         run: |
           leaked=0
-          for marker in gallery-swatch sink-section "Continue as Employee"; do
+          for marker in gallery-swatch sink-section; do
             if grep -rq "$marker" dist/; then
               echo "::error::Development-only code leaked into the production build ($marker)."
               grep -rl "$marker" dist/
