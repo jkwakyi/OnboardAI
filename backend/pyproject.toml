@@ -20,6 +20,10 @@ dependencies = [
     # Parses multipart/form-data, which is how a document is uploaded
     # (ON-39). FastAPI needs it present to accept an UploadFile at all.
     "python-multipart>=0.0.18,<0.1",
+    # Extracts the text from an uploaded PDF (ON-40). Pure Python, so it
+    # needs no compiler on Windows or in CI. Also what the handbook tests
+    # read the generated PDFs back with.
+    "pypdf>=5.1,<7",
 ]
 
 [project.optional-dependencies]
@@ -29,8 +33,6 @@ dev = [
     "ruff>=0.8,<0.16",
     # Generates the handbook PDFs from their TXT sources (ON-12).
     "reportlab>=4.2,<5",
-    # Reads the generated PDFs back in the handbook tests.
-    "pypdf>=5.1,<7",
 ]
 
 [build-system]
