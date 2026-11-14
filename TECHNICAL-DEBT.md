@@ -50,17 +50,28 @@ for the record, with what fixed it).
 
 **Taken:** 11 November 2026, in ON-9 · **Status:** Open · **Ticket:** ON-18
 
-**What.** `LLM_PROVIDER` defaults to `mock`. No real language model is wired
-in, and the `LLMProvider` interface has no production implementation yet.
+**What.** `LLM_PROVIDER` defaults to `mock`. No real language model is
+wired in. *Updated 14 November 2026, ON-44:* the `LLMProvider` interface
+now exists with the `generate(prompt)` the contracts fix, and the Mock LLM
+implements it — so the shape of the seam is settled and only the production
+implementation behind it is missing. `"real"` is deliberately not a
+selectable name until ON-18 lands, because a name that resolves to nothing
+is better than one that resolves to a stub nobody notices.
 
 **Why.** Backend and frontend work could not wait for a model to be chosen,
 and the design requires that the Mock LLM stays selectable so CI and
 teammates without the model can still run the system.
 
-**Impact.** Nothing exercises the real `generate(prompt)` path. The 20-second
-timeout, the JSON validation in the LLM Gateway, and the fallback behaviour
-on a provider error are all untested against anything that can actually fail
-in those ways. Answer quality is entirely unmeasured.
+**Impact.** Nothing exercises the real `generate(prompt)` path, and answer
+quality is entirely unmeasured — no claim about it is supportable.
+
+The second half of this used to read that the Gateway's timeout, JSON check
+and provider-error handling were untested against anything that could
+actually fail. ON-44 changed that: the Mock LLM can be told to be slow, to
+raise, or to return something that is not JSON, which are exactly the three
+conditions the contracts say produce the HR fallback. They are testable
+now. What remains untested is how a *real* model fails, which is rarely how
+a mock does.
 
 **Mitigation.** ON-18 selects a real provider and wires it behind the same
 interface; the Mock LLM remains selectable by configuration. ON-24 then
