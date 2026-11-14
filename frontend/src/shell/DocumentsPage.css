@@ -1,0 +1,80 @@
+/*
+ * The Admin Upload Page (ON-42).
+ *
+ * Tokens only - every value here is a variable from ON-63. A page that
+ * names its own colours or spacings is a page the theme cannot reach.
+ */
+
+.documents {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.documents__lead {
+  margin-bottom: var(--space-4);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+/* The dropzone sits above the button, with room between them. */
+.documents :where(.oa-drop) {
+  margin-bottom: var(--space-4);
+}
+
+/*
+ * Wraps rather than breaking at a width.
+ *
+ * A media query would need a pixel value, and a custom property cannot be
+ * used in one - so a breakpoint here would be the one hardcoded
+ * measurement in a shipped stylesheet, which `noHardcodedSizes` rightly
+ * refuses. Wrapping gets the same result from the content itself: the
+ * caption drops below the ring exactly when it no longer fits beside it,
+ * at whatever width that turns out to be.
+ */
+.documents__progress {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.documents__phase {
+  color: var(--text);
+  font-size: var(--text-sm);
+  /* The filename can be long and is not worth a line break mid-word. */
+  overflow-wrap: anywhere;
+}
+
+.documents__outcome {
+  margin-bottom: var(--space-3);
+}
+
+.documents__detail {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.documents__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+}
+
+/* The same treatment as a card's section label, from the same tokens,
+   so a field name here and a label there are visibly the same thing. */
+.documents__fact dt {
+  margin-bottom: var(--space-1);
+  color: var(--label-color);
+  font-size: var(--label-size);
+  font-weight: var(--label-weight);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+}
+
+.documents__fact dd {
+  color: var(--text);
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
