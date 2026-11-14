@@ -53,7 +53,14 @@ def accounts(auth_env, db_session):
 
 
 @pytest.fixture
-def api(auth_env, db_session, storage, accounts):
+def api(auth_env, db_session, storage, accounts, mock_embedding, collection):
+    """The endpoint, with U4 pointed at a fake Vector Database.
+
+    Since ON-41 the upload embeds its sections before answering, so without
+    `mock_embedding` and `collection` every test here would try to reach
+    the paid Embedding API and a running ChromaDB. Tests that care about
+    the vectors take the `collection` fixture too and read it directly.
+    """
     app = create_app()
     app.dependency_overrides[get_session] = lambda: db_session
     with TestClient(app) as client:
@@ -347,3 +354,94 @@ def test_a_document_of_nothing_but_separators_is_a_422(api, accounts, db_session
     assert db_session.scalars(select(Document)).all() == []
     assert db_session.scalars(select(Section)).all() == []
     assert not storage.exists() or list(storage.glob("*")) == []
+
+
+# --- the sections are embedded and stored (ON-41, U4) ------------------
+
+
+def test_an_uploaded_document_has_a_vector_for_every_section(api, accounts, db_session, collection):
+    response = upload(api, accounts, TXT_BYTES, name="handbook.txt", kind="text/plain")
+    assert response.status_code == 201
+
+    sections = db_session.scalars(select(Section)).all()
+    assert len(sections) > 1
+    assert set(collection.rows) == {str(section.id) for section in sections}
+
+
+def test_a_stored_vector_names_the_document_it_came_from(api, accounts, db_session, collection):
+    response = upload(api, accounts, TXT_BYTES, name="handbook.txt", kind="text/plain")
+    document_id = response.json()["id"]
+
+    assert all(
+        collection.metadata_for(identifier)["document_id"] == document_id
+        for identifier in collection.rows
+    )
+
+
+def test_the_vectors_have_the_configured_width(api, accounts, collection):
+    # `mock_embedding` sets EMBEDDING_DIMENSIONS to 32. A collection built
+    # for one width is the reason this has to be true of every vector.
+    upload(api, accounts, TXT_BYTES, name="handbook.txt", kind="text/plain")
+
+    assert {len(vector) for vector, _metadata in collection.rows.values()} == {32}
+
+
+def test_a_document_that_cannot_be_embedded_is_refused(api, accounts, db_session, collection):
+    # Without this the upload would answer 201 and the Admin Upload Page
+    # would list an approved document that retrieval can never return -
+    # which is exactly what ON-42's success message promises it is not.
+    collection.fail_with = RuntimeError("the Vector Database is unreachable")
+
+    response = upload(api, accounts, TXT_BYTES, name="handbook.txt", kind="text/plain")
+
+    assert response.status_code == 500
+    assert "prepared for search" in response.json()["detail"]
+
+
+def test_a_document_that_cannot_be_embedded_leaves_nothing_behind(
+    api, accounts, db_session, storage, collection
+):
+    collection.fail_with = RuntimeError("the Vector Database is unreachable")
+
+    upload(api, accounts, TXT_BYTES, name="handbook.txt", kind="text/plain")
+
+    assert db_session.scalars(select(Document)).all() == []
+    assert db_session.scalars(select(Section)).all() == []
+    assert not storage.exists() or list(storage.glob("*")) == []
+
+
+def test_vectors_written_before_a_later_failure_are_cleaned_up(
+    api, accounts, db_session, storage, collection, monkeypatch
+):
+    """The half-written case, which is the one that bites.
+
+    U4 writes outside the SQL transaction (TD-28), so a failure after some
+    batches have gone up leaves vectors for sections that are about to be
+    deleted. Those are what retrieval searches, so they would be found and
+    then cited as nothing at all.
+    """
+    import app.services.embedding.store as store
+
+    monkeypatch.setattr(store, "MAX_WRITE_BATCH", 1)
+    original = collection.upsert
+
+    def fail_after_the_first(*args, **kwargs):
+        original(*args, **kwargs)
+        if len(collection.upsert_calls) >= 2:
+            raise RuntimeError("the Vector Database went away mid-write")
+
+    monkeypatch.setattr(collection, "upsert", fail_after_the_first)
+
+    response = upload(api, accounts, TXT_BYTES, name="handbook.txt", kind="text/plain")
+
+    assert response.status_code == 500
+    assert db_session.scalars(select(Document)).all() == []
+    assert collection.count() == 0
+
+
+def test_the_refusal_does_not_leak_what_went_wrong_inside(api, accounts, collection):
+    collection.fail_with = RuntimeError("psycopg: FATAL password authentication failed")
+
+    response = upload(api, accounts, TXT_BYTES, name="handbook.txt", kind="text/plain")
+
+    assert "password" not in response.text

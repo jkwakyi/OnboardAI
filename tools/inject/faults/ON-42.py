@@ -10,9 +10,12 @@ plausible reason, and each is the kind of change a reviewer waves through:
 * "Content-Type is set by hand" looks like tidying up an omission. It
   destroys the multipart boundary, and the request still looks perfectly
   well formed from the browser's side.
-* "the success message promises search" is what you write if you have not
-  noticed that embedding is ON-41 and still blocked on ON-10. It tells an
-  HR administrator their policy is answerable when nothing can reach it.
+* "the success message is reverted to its pre-ON-41 wording" is a one-line
+  change that looks like restoring careful hedging. Until U4 existed the
+  page had to say the document could not answer questions yet; now that an
+  upload embeds before it answers, that caution tells an HR administrator
+  their policy is unreachable when it is already in the Vector Database -
+  and sends them off to fix something that is not broken.
 * "every failure offers a retry" is friendlier by one line, and invites
   somebody to re-send a 9 MB PDF that will be refused for exactly the same
   reason as before.
@@ -112,10 +115,10 @@ FAULTS = [
     ),
     # --- what a success says ---
     (
-        "the success message promises the document is searchable",
+        "the success message is reverted to its pre-ON-41 wording",
         PAGE,
+        "  'The file is stored, its text has been read and split into sections, and those sections can now be found when an employee asks a question.'",
         "  'The file is stored and its text has been read and split into sections. Answering questions from it also needs the Embedding API, which is not connected yet.'",
-        "  'The file is stored and is now searchable.'",
     ),
     (
         "the page shows the chosen filename rather than the stored one",

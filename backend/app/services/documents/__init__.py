@@ -7,9 +7,10 @@ Database (U3), and passes the sections on to be turned into vectors and
 saved (U4)".
 
 `storage.py` is U2 from ON-39, `extraction.py` and `indexing.py` are U3
-from ON-40. U4 - handing the sections on to be turned into vectors - is
-ON-41 and will arrive beside them; the Documents API imports
-`app.services.documents` and should not have to change when it does.
+from ON-40. U4 - the sections turned into vectors and saved - is ON-41 and
+lives in `app.services.embedding`, not here: it belongs to the Embedding
+Client, and the same client embeds employee questions, which has nothing
+to do with documents at all.
 """
 
 from app.services.documents.extraction import (

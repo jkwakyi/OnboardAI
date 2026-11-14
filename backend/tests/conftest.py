@@ -1,5 +1,7 @@
 """Shared test fixtures."""
 
+from typing import Any
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, event
@@ -10,6 +12,7 @@ from app.config import Settings, get_settings
 from app.db import Base
 from app.main import create_app
 from app.services.auth import passwords, tokens
+from app.services.embedding import store as embedding_store
 
 
 @pytest.fixture(autouse=True, scope="session")
@@ -110,3 +113,100 @@ def auth_env(monkeypatch):
     reset()
     yield get_settings()
     reset()
+
+
+class FakeCollection:
+    """An in-memory stand-in for the ChromaDB collection (ON-41).
+
+    The real one needs a running Vector Database, which a unit test must
+    not need. This keeps what was written so a test can assert on it, and
+    can be told to fail so the discard path is reachable.
+
+    It deliberately enforces the two rules the real collection enforces and
+    that our code could otherwise break silently: ids are strings, and
+    every vector in a collection has the same width.
+    """
+
+    def __init__(self) -> None:
+        self.rows: dict[str, tuple[list[float], dict[str, Any]]] = {}
+        self.upsert_calls: list[int] = []
+        self.documents_seen: list[Any] = []
+        self.fail_with: Exception | None = None
+        self.width: int | None = None
+
+    # --- the parts of the ChromaDB API our code uses --------------------
+
+    def upsert(self, ids, embeddings, metadatas, documents=None) -> None:
+        # Recorded, not used: the Vector Database is meant to hold vectors
+        # and ids, with the section text staying in the Main Database as
+        # the single approved copy. A test asserts this stays None.
+        self.documents_seen.append(documents)
+        if self.fail_with is not None:
+            raise self.fail_with
+        if not (len(ids) == len(embeddings) == len(metadatas)):
+            raise AssertionError("ids, embeddings and metadatas must be the same length")
+        for identifier, vector, metadata in zip(ids, embeddings, metadatas, strict=True):
+            if not isinstance(identifier, str):
+                raise TypeError(f"ChromaDB ids are strings; got {type(identifier).__name__}")
+            if self.width is None:
+                self.width = len(vector)
+            elif len(vector) != self.width:
+                raise ValueError(
+                    f"Collection expecting embedding with dimension of {self.width}, "
+                    f"got {len(vector)}"
+                )
+            for key, value in metadata.items():
+                if value is None:
+                    raise ValueError(f"ChromaDB metadata cannot be null; {key!r} is")
+            self.rows[identifier] = (list(vector), dict(metadata))
+        self.upsert_calls.append(len(ids))
+
+    def delete(self, where=None, ids=None) -> None:
+        if ids is not None:
+            for identifier in ids:
+                self.rows.pop(identifier, None)
+            return
+        if where:
+            for identifier, (_vector, metadata) in list(self.rows.items()):
+                if all(metadata.get(key) == value for key, value in where.items()):
+                    del self.rows[identifier]
+
+    def count(self) -> int:
+        return len(self.rows)
+
+    # --- what the tests read -------------------------------------------
+
+    def metadata_for(self, identifier: str) -> dict[str, Any]:
+        return self.rows[identifier][1]
+
+    def vector_for(self, identifier: str) -> list[float]:
+        return self.rows[identifier][0]
+
+
+@pytest.fixture
+def collection(monkeypatch) -> FakeCollection:
+    """Replace the Vector Database with the fake one, everywhere.
+
+    Patched where `store.py` looked the name up rather than where it is
+    defined, because `from app.vectorstore import get_collection` binds the
+    function into this module at import time and patching the original
+    would leave that binding pointing at the real one.
+    """
+    fake = FakeCollection()
+    monkeypatch.setattr(embedding_store, "get_collection", lambda: fake)
+    return fake
+
+
+@pytest.fixture
+def mock_embedding(monkeypatch) -> None:
+    """Embed with the mock provider, at a width small enough to read.
+
+    The hosted client has its own tests and is never reached from here: an
+    endpoint test that called the real Embedding API would need a key, cost
+    money and fail offline.
+    """
+    monkeypatch.setenv("EMBEDDING_PROVIDER", "mock")
+    monkeypatch.setenv("EMBEDDING_DIMENSIONS", "32")
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()

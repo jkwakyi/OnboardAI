@@ -88,7 +88,7 @@ export const SUCCESS_TITLE = 'Document saved'
  * the most useful-sounding lie this page could tell.
  */
 export const SUCCESS_DETAIL =
-  'The file is stored and its text has been read and split into sections. Answering questions from it also needs the Embedding API, which is not connected yet.'
+  'The file is stored, its text has been read and split into sections, and those sections can now be found when an employee asks a question.'
 
 /** The file this state is about, where it has one. */
 function fileOf(upload: Upload): File | null {
