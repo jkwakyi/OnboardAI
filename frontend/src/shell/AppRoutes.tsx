@@ -13,12 +13,27 @@
  */
 import { Navigate, Route, Routes } from 'react-router'
 
+import type { ReactNode } from 'react'
+
 import AppShell from './AppShell'
+import DocumentsPage from './DocumentsPage'
 import LoginPage from './LoginPage'
 import NotAvailableYet from './NotAvailableYet'
 import NotFound from './NotFound'
 import { RequireRole, RequireSession } from './guards'
 import { DEFAULT_PATH, LOGIN_PATH, ROUTES } from './navigation'
+
+/**
+ * The pages that exist, by path.
+ *
+ * A route with no entry here renders `NotAvailableYet` naming the ticket
+ * that builds it. Keyed off the same `ROUTES` table rather than listed
+ * separately, so a page cannot be built and left unreachable, or routed
+ * at a path the rail does not show.
+ */
+const PAGES: Record<string, ReactNode> = {
+  '/documents': <DocumentsPage />,
+}
 
 export default function AppRoutes() {
   return (
@@ -34,7 +49,7 @@ export default function AppRoutes() {
             <Route
               element={
                 <RequireRole route={route}>
-                  <NotAvailableYet route={route} />
+                  {PAGES[route.path] ?? <NotAvailableYet route={route} />}
                 </RequireRole>
               }
               key={route.path}
