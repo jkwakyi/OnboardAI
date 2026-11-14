@@ -260,6 +260,30 @@ is
 `/docs` has an **Authorize** button: paste a token there and the generated
 documentation will send it for you.
 
+### Signing in from the interface
+
+Start the backend and the frontend, open the app, and sign in with one of
+the seeded accounts above. There are no development shortcut buttons any
+more — ON-65 shipped two and ON-38 deleted them, because a password-free way
+in that only works in development is still one somebody eventually ships.
+
+The token is kept in `sessionStorage`, so a refresh keeps you signed in and
+closing the tab signs you out. What that costs is
+[TD-24](TECHNICAL-DEBT.md#td-24--the-login-token-is-readable-by-script-on-the-page):
+script on the page can read it, which is the trade against an `httpOnly`
+cookie and the CSRF work that comes with one.
+
+There is one piece of session state, the token, and the name and role shown
+in the interface are read out of its claims. Those claims are **not
+verified** — a browser cannot check a signature — so they decide which
+navigation to draw and nothing more. Auth Check enforces the role on every
+request, which means editing the token in devtools changes the rail and
+changes nothing the server will honour.
+
+`frontend/.env.example` has `VITE_API_BASE_URL` if the backend is not on
+`localhost:8000`. Nothing secret may go in that file: Vite bakes every
+`VITE_`-prefixed variable into the bundle it ships to the browser.
+
 ### Uploading a document
 
 ```bash
