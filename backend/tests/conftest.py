@@ -6,10 +6,39 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
-from app.config import get_settings
+from app.config import Settings, get_settings
 from app.db import Base
 from app.main import create_app
 from app.services.auth import passwords, tokens
+
+
+@pytest.fixture(autouse=True, scope="session")
+def ignore_the_developers_env_file():
+    """The suite reads the process environment and no `.env` from disk.
+
+    `Settings` points `env_file` at the repository's `.env`, which is
+    exactly right for running the application and exactly wrong for
+    testing it: pydantic-settings reads that file whether or not a test
+    cleared the matching variable, so `monkeypatch.delenv` cannot make a
+    setting absent and a test for "this is not configured" passes only on
+    a machine that happens not to configure it.
+
+    That is not hypothetical. Two tests here assert that seeding refuses to
+    run without `SEED_EMPLOYEE_PASSWORD` and `SEED_HR_PASSWORD`. Both
+    passed in CI and on a fresh checkout, and both failed the moment
+    somebody followed the README's own instruction to put those passwords
+    in their `.env` - which is to say they failed for the one person who
+    had set the project up as documented, and nowhere else.
+
+    Autouse and session-scoped, because any setting in anybody's `.env` can
+    change the behaviour under test, not just those two.
+    """
+    original = Settings.model_config.get("env_file")
+    Settings.model_config["env_file"] = ()
+    get_settings.cache_clear()
+    yield
+    Settings.model_config["env_file"] = original
+    get_settings.cache_clear()
 
 
 @pytest.fixture
