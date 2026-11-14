@@ -324,7 +324,26 @@ a fake answer somebody eventually screenshots into a report.
 
 It can also be told to be slow, to raise, or to return something that is
 not JSON — the three conditions the contracts say produce the HR fallback,
-and ones the LLM Gateway (ON-45) cannot be tested against otherwise.
+and ones the **LLM Gateway** could not be tested against otherwise.
+
+The Gateway sits in front of whichever provider is selected and does three
+things, all of them about not trusting the model:
+
+- **The prompt carries the retrieved sections and nothing else**, so there
+  is no other material to answer from.
+- **The wait is bounded at 20 seconds**, which the contracts fix — so it is
+  a constant in the code rather than a setting. What it stops is the
+  employee waiting; it cannot stop the call itself
+  ([TD-23](TECHNICAL-DEBT.md#td-23--the-20-second-timeout-stops-the-wait-not-the-call)).
+- **A citation the model invented is dropped.** Every citation is matched
+  against the sections that went in, and its heading comes from the
+  retrieved section rather than from the model. An answer left with no
+  verifiable citation is treated as a failure, because an answer nobody can
+  check is the invented policy this design exists to prevent.
+
+A timeout, a provider error and output that fails the JSON check all return
+the same HR fallback message. The reason they differ goes to the log, not to
+whoever asked the question.
 
 An unrecognised `LLM_PROVIDER` is a startup error, not a quiet fall back
 to the mock. A deployment that believes it is using a real model while
@@ -383,6 +402,28 @@ caught before it reaches `main`.
 
 Nothing is deployed. The frontend job uploads `dist/` as a run artefact; see
 TD-15 in [`TECHNICAL-DEBT.md`](TECHNICAL-DEBT.md).
+
+## Checking that the tests mean something
+
+Every ticket ends with a fault-injection pass: a list of single edits that
+each break one thing, applied to the working tree one at a time with the
+relevant tests run against each.
+
+```bash
+python tools/inject/inject.py tools/inject/faults/ON-45.py
+```
+
+A fault no test notices is a test that was not testing anything, and the
+exit code is non-zero if any fault went unnoticed **or could not be
+applied**. The second half matters: a `before` string that matches nothing
+is a fault that never ran, and "13/19 caught, 6 skipped" reads a lot like a
+pass. The faults for a ticket live in `tools/inject/faults/` as data, so
+the next person can re-run them.
+
+This has earned its place. Across ON-39 to ON-45 it caught, among others, a
+size limit that read the whole upload before checking it, a 20-second
+timeout that waited out the provider anyway, and four tests of mine that
+were passing without testing their subject.
 
 ## Watching a build
 

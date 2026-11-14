@@ -39,6 +39,7 @@ See [How to add an entry](#how-to-add-an-entry).
 | [TD-20](#td-20--nothing-limits-failed-login-attempts) | Nothing limits failed login attempts | Backend API | Mitigated |
 | [TD-21](#td-21--auth-check-guards-routes-not-rows) | Auth Check guards routes, not rows | Backend API | Open |
 | [TD-22](#td-22--nothing-inspects-what-is-inside-an-uploaded-document) | Nothing inspects what is inside an uploaded document | Backend API | Mitigated |
+| [TD-23](#td-23--the-20-second-timeout-stops-the-wait-not-the-call) | The 20-second timeout stops the wait, not the call | AI Chatbot Module | Accepted |
 
 Status is **Open** (we intend to pay it back), **Accepted** (we have decided
 to live with it, and the entry says why), or **Mitigated** (paid back; kept
@@ -710,3 +711,43 @@ upload for malware, and nothing will before the alpha. The bound is on what
 parsing may cost, not on what the file may contain. The endpoint remains
 HR-only and the alpha is not on the public internet, which is what makes
 that acceptable rather than merely convenient.
+
+---
+
+### TD-23 — The 20-second timeout stops the wait, not the call
+
+**Taken:** 14 November 2026, in ON-45 · **Status:** Accepted · **Ticket:** ON-18
+
+**What.** `LLMProvider.generate(prompt)` is an ordinary blocking call, and
+Python gives no way to interrupt one from outside. The LLM Gateway runs it
+on a daemon thread and stops waiting after twenty seconds — but the thread
+carries on until the provider returns on its own. A provider that never
+returns leaves a thread behind for the life of the process.
+
+**Why.** The contracts fix the twenty seconds and fix `generate(prompt)` as
+the whole interface, so the provider is not given a timeout to honour and
+could not be trusted with one anyway: a provider that is not answering is
+not going to enforce a limit on itself. Stopping the wait is the part that
+matters to the employee, and it is the part that can be done from here.
+
+**Impact.** Each timed-out request costs a thread until its provider
+returns. Twenty of them against a wedged local model is twenty threads, and
+if the model is wedged because it is out of VRAM they will not return.
+Nothing bounds how many can accumulate. It is a slow leak rather than a
+crash, and the thing it would eventually exhaust is memory. The daemon flag
+at least means a hung provider cannot stop the backend exiting, which an
+executor-managed thread would have done.
+
+**Mitigation.** The real fix belongs to whoever writes the Real LLM Client
+(ON-18): an HTTP client with its own socket and read timeouts, set below the
+Gateway's twenty seconds, so the call *returns* rather than merely being
+abandoned. Then the Gateway's limit becomes the backstop it should be
+instead of the only line of defence. Until then the Mock LLM always
+returns, so nothing in the alpha leaks a thread unless a real provider is
+wired in.
+
+A note on how this was found: the first version used
+`with ThreadPoolExecutor(...)`, whose `__exit__` calls `shutdown(wait=True)`
+— so the pool joined the very thread the timeout had just given up on, and
+the Gateway returned only once the provider did. The limit was not a limit,
+and it read as correct. Only a test that measured the wall clock noticed.
