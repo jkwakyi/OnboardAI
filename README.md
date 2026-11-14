@@ -260,6 +260,23 @@ is
 `/docs` has an **Authorize** button: paste a token there and the generated
 documentation will send it for you.
 
+### Uploading a document
+
+```bash
+curl -X POST http://localhost:8000/api/documents -H "Authorization: Bearer $TOKEN" -F "file=@data/handbook/benefits.pdf"
+```
+
+HR administrators only. A PDF or a TXT, up to `MAX_UPLOAD_BYTES` (10 MB by
+default); the original is kept in `FILE_STORAGE_DIR` under a name the server
+generates, and the name you uploaded is kept in the database for display and
+never used to build a path. What the bytes say beats what the request
+declared: a file called `handbook.pdf` that does not begin `%PDF-` is
+refused rather than stored and discovered later.
+
+`415` for anything that is not a PDF or TXT, `413` for one over the limit,
+`400` for an empty one. Extracting the text and making it searchable is
+ON-40 and ON-41 — for now an upload is kept, listed and nothing more.
+
 Bad credentials are a `401` with the same message whichever way they are
 wrong; a malformed body is a `422`, including one carrying a field the
 contracts do not define. Ten failures from one address, or from one client,
