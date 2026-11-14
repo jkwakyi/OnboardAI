@@ -307,6 +307,32 @@ does and does not cover is
 the fact that a token cannot be withdrawn once issued is
 [TD-19](TECHNICAL-DEBT.md#td-19--a-login-token-cannot-be-withdrawn-once-issued).
 
+### Which language model answers
+
+Nothing downloads a model and nothing needs a key:
+
+```
+LLM_PROVIDER=mock
+```
+
+The design puts an `LLMProvider` interface in front of the model, with the
+one method the contracts fix — `generate(prompt)`. The **Mock LLM**
+implements it and is the default, so CI, the frontend and a teammate
+without the weights can all run the answer path. Its answers say plainly
+that they came from a mock: a fake answer that reads like a real HR one is
+a fake answer somebody eventually screenshots into a report.
+
+It can also be told to be slow, to raise, or to return something that is
+not JSON — the three conditions the contracts say produce the HR fallback,
+and ones the LLM Gateway (ON-45) cannot be tested against otherwise.
+
+An unrecognised `LLM_PROVIDER` is a startup error, not a quiet fall back
+to the mock. A deployment that believes it is using a real model while
+answering every question with "this came from the Mock LLM" would say so
+nowhere anybody is looking. `real` becomes selectable with ON-18; what is
+and is not true today is
+[TD-01](TECHNICAL-DEBT.md#td-01--the-mock-llm-is-the-default-provider).
+
 ## Tests and lint
 
 **Backend** (from `backend/`, with the virtual environment active):
@@ -387,6 +413,8 @@ backend/
     services/     Auth, Document Upload, Logging, Escalation, QA Controller,
                   Retrieval, Embedding Client, LLM Gateway
       auth/       password hashing, login tokens, the seeded accounts
+      documents/  File Storage, text extraction, sections
+      llm/        the LLMProvider interface and the Mock LLM
     vectorstore/  Vector Database (ChromaDB) client
     config.py     settings, read from the environment
     main.py       application factory
