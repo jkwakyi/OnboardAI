@@ -81,6 +81,24 @@ class Settings(BaseSettings):
     # fill a disk by accident.
     max_upload_bytes: int = 10 * 1024 * 1024
 
+    # Reading an uploaded document (ON-40). ON-39 bounds what arrives;
+    # these bound what it costs to read, which was the other half TD-22
+    # was waiting on. A PDF is a program of sorts and a small one can ask
+    # for a great deal of work, so extraction stops at a page count, a
+    # character count and a wall clock, whichever comes first.
+    pdf_max_pages: int = 200
+    extraction_max_characters: int = 1_000_000
+    # Its own number, not the LLM Gateway's 20 seconds - the two limits
+    # bound different things and should be able to move apart.
+    extraction_timeout_seconds: float = 15.0
+
+    # How big a section is. A section is what gets a vector, what retrieval
+    # returns five of, and what a citation points at, so the size is a
+    # retrieval decision rather than a storage one: large enough to carry
+    # an answer, small enough that five of them are about one subject.
+    section_max_characters: int = 1500
+    section_min_characters: int = 200
+
     # Login API (ON-37): how often one address, or one client, may fail
     # before being asked to wait. Checked before any password hashing, so
     # it limits both guessing and the CPU a caller can make the server

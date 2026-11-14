@@ -274,8 +274,27 @@ declared: a file called `handbook.pdf` that does not begin `%PDF-` is
 refused rather than stored and discovered later.
 
 `415` for anything that is not a PDF or TXT, `413` for one over the limit,
-`400` for an empty one. Extracting the text and making it searchable is
-ON-40 and ON-41 — for now an upload is kept, listed and nothing more.
+`400` for an empty one.
+
+The text is then extracted and split into **sections** — the unit the rest
+of the assistant is built on: a section is what gets a vector, what
+retrieval returns five of, and what a citation points at. The split follows
+the document's own headings where it has them, because whoever wrote it
+divided it better than any rule could; a section too long for one retrieval
+result is split again at paragraph boundaries, keeping its heading so the
+citation still names where it came from.
+
+A document nothing can be read from is a **`422`** and the upload is undone
+— no row, no file, no sections. The case that matters is a scanned PDF: it
+needs text recognition before it can answer anything, and an HR
+administrator should hear that at the moment they upload it rather than
+discover later that the assistant never cites it.
+
+Reading is bounded three ways, which is the other half of
+[TD-22](TECHNICAL-DEBT.md#td-22--nothing-inspects-what-is-inside-an-uploaded-document):
+`PDF_MAX_PAGES`, `EXTRACTION_MAX_CHARACTERS` and
+`EXTRACTION_TIMEOUT_SECONDS`, the last checked per page. Turning the
+sections into vectors is ON-41.
 
 Bad credentials are a `401` with the same message whichever way they are
 wrong; a malformed body is a `422`, including one carrying a field the
