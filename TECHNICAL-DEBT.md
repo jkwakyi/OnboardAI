@@ -38,6 +38,7 @@ See [How to add an entry](#how-to-add-an-entry).
 | [TD-19](#td-19--a-login-token-cannot-be-withdrawn-once-issued) | A login token cannot be withdrawn once issued | Backend API | Accepted |
 | [TD-20](#td-20--nothing-limits-failed-login-attempts) | Nothing limits failed login attempts | Backend API | Mitigated |
 | [TD-21](#td-21--auth-check-guards-routes-not-rows) | Auth Check guards routes, not rows | Backend API | Open |
+| [TD-22](#td-22--nothing-inspects-what-is-inside-an-uploaded-document) | Nothing inspects what is inside an uploaded document | Backend API | Accepted |
 
 Status is **Open** (we intend to pay it back), **Accepted** (we have decided
 to live with it, and the entry says why), or **Mitigated** (paid back; kept
@@ -658,3 +659,36 @@ has already verified and left on the request. ON-21's HR Inbox reads the
 same endpoint. Until that lands the endpoint does not exist at all, so the
 gap is real but not yet reachable — which is the one good reason to write it
 down now rather than discover it later.
+
+---
+
+### TD-22 — Nothing inspects what is inside an uploaded document
+
+**Taken:** 14 November 2026, in ON-39 · **Status:** Accepted · **Ticket:** ON-40
+
+**What.** An upload is checked three ways — it begins `%PDF-` or contains no
+NUL bytes, it is not empty, and it is under the size limit — and then it is
+written to File Storage as it arrived. Nothing scans it for malware, and
+nothing bounds what the file will cost to parse. ON-40 then hands it to a
+PDF library.
+
+**Why.** The magic-byte check is what stops the mistake this project will
+actually make — somebody uploading a .docx renamed to .pdf, which would be
+stored happily and then fail silently at extraction. Scanning is a different
+problem, needs a scanner the team does not have, and is not something the
+architecture names. The endpoint is HR-only, so the people who can reach it
+are the two or three administrators the system is for.
+
+**Impact.** A PDF crafted to be expensive to parse — deeply nested objects,
+a compression bomb — is a 10 MB upload that could cost far more than 10 MB
+of memory when ON-40 opens it, in-process, with no timeout. That is a denial
+of service available to anybody holding an HR administrator token, which for
+the alpha means anybody holding the seeded HR password.
+
+**Mitigation.** The size limit is the only real bound today, and it is a
+bound on input rather than on work. ON-40 owns the other half and should
+decide, when it picks a parser, what happens to a file that will not parse
+in reasonable time — the smallest honest version is a page cap and a wall
+clock, matching how the LLM Gateway's 20-second timeout treats a provider
+that will not answer. Until then: do not point this endpoint at the public
+internet, which the alpha does not.
