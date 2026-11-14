@@ -5,10 +5,12 @@ DELETE /api/documents/{id} - all three "Admin Upload Page (HR
 administrator)", which Auth Check (ON-14) enforces from its own table
 before any of this runs.
 
-POST is ON-39: "A PDF or TXT document in. The original file is saved..."
-The rest of that sentence - the text extracted, split into sections, and
-turned into vectors - is ON-40 and ON-41, which will hang off the same
-endpoint. GET and DELETE are ON-43.
+POST is the whole of U1 to U4 now: the original file is saved (ON-39, U2),
+the text is extracted and split into sections (ON-40, U3), and the sections
+are embedded and stored in the Vector Database (ON-41, U4). All four happen
+before the response, because the contracts draw them as one flow and
+because an HR administrator who is told the upload worked should be told at
+the same moment if it did not. GET and DELETE are ON-43.
 """
 
 from __future__ import annotations
@@ -38,6 +40,7 @@ from app.services.documents import (
     index_document,
     save_upload,
 )
+from app.services.embedding import embed_document_sections, forget_document
 
 logger = logging.getLogger(__name__)
 
@@ -161,30 +164,65 @@ def upload_document(
             detail="The document could not be read. Please try again.",
         ) from None
 
+    # U4: the sections are turned into vectors and stored in the Vector
+    # Database, which is the step that makes the document findable at all.
+    # Discarded on failure for the same reason as U3, and it is the same
+    # reason twice: an HR administrator told the upload worked, holding a
+    # document the assistant will never cite, has no way to find that out.
+    try:
+        embedded = embed_document_sections(sections)
+    except Exception:
+        _discard(session, document, stored.path)
+        logger.exception("could not embed %s; the upload was discarded", stored.filename)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="The document could not be prepared for search. Please try again.",
+        ) from None
+
     logger.info(
-        "user %s uploaded document %s (%s, %d bytes, %d sections)",
+        "user %s uploaded document %s (%s, %d bytes, %d sections, %d vectors)",
         uploader.id,
         document.id,
         document.content_type,
         document.size_bytes,
         len(sections),
+        embedded,
     )
     return document
 
 
 def _discard(session: Session, document: Document, path: Path) -> None:
-    """Undo a half-finished upload: no row, no file, no sections.
+    """Undo a half-finished upload: no row, no file, no sections, no vectors.
 
     A document that was stored but never split is one retrieval can never
     find and the Admin Upload Page would still list - an HR administrator
     would see an approved document that cannot answer a single question.
     Better that the upload failed and they know it.
     """
+    # Read before the rollback, which detaches the instance and would make
+    # this a refresh against a row that is about to be deleted.
+    document_id = document.id
+    filename = document.filename
+
     session.rollback()
     try:
         session.delete(document)
         session.commit()
     except SQLAlchemyError:
         session.rollback()
-        logger.exception("could not remove the record for %s", document.filename)
+        logger.exception("could not remove the record for %s", filename)
     delete_stored_file(path)
+
+    # U4 writes outside the SQL transaction, so a failure part way through
+    # can leave vectors behind for sections that no longer exist (TD-28).
+    # Those are what retrieval searches, so they would be found and then
+    # cited as nothing at all. A document that never reached U4 has none
+    # and this is a no-op.
+    if document_id is not None:
+        try:
+            forget_document(document_id)
+        except Exception:
+            # The upload is already being refused; the Vector Database
+            # being unreachable as well must not replace that refusal with
+            # a different one.
+            logger.exception("could not remove the vectors for document %s", document_id)
