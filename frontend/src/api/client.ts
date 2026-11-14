@@ -14,6 +14,7 @@
  * each page discovering it separately.
  */
 import { ApiError, NETWORK_MESSAGE, NetworkError, detailFrom, messageForStatus } from './errors'
+import { uploadWithProgress, type UploadOptions } from './upload'
 
 /**
  * Where the backend is.
@@ -37,6 +38,14 @@ export interface RequestOptions {
 
 export interface ApiClient {
   request: <T>(path: string, options?: RequestOptions) => Promise<T>
+  /**
+   * POST a file and watch it go out.
+   *
+   * Separate from `request` because it is the one call that cannot be made
+   * with `fetch`: there is no upload-progress event there, so a page built
+   * on it could only show a spinner. `upload.ts` explains the rest.
+   */
+  upload: <T>(path: string, formData: FormData, options?: UploadOptions) => Promise<T>
   /** The token this client is sending, or null. */
   token: string | null
 }
@@ -46,12 +55,15 @@ export function createApiClient({
   onUnauthorised,
   baseUrl = API_BASE_URL,
   fetchImpl = globalThis.fetch,
+  uploadImpl = uploadWithProgress,
 }: {
   token?: string | null
   /** Called when the backend says the token is no longer good. */
   onUnauthorised?: () => void
   baseUrl?: string
   fetchImpl?: typeof fetch
+  /** For tests, which have no real XMLHttpRequest to drive. */
+  uploadImpl?: typeof uploadWithProgress
 } = {}): ApiClient {
   async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
     const { method = 'GET', body, formData, signal } = options
@@ -107,7 +119,17 @@ export function createApiClient({
     return parsed as T
   }
 
-  return { request, token }
+  function upload<T>(path: string, formData: FormData, options: UploadOptions = {}): Promise<T> {
+    return uploadImpl<T>({
+      url: `${baseUrl}${path}`,
+      formData,
+      token,
+      onUnauthorised,
+      ...options,
+    })
+  }
+
+  return { request, upload, token }
 }
 
 /** The body as JSON, or undefined if it is not JSON at all. */
