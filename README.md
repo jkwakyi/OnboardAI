@@ -177,7 +177,36 @@ That makes one real request and reports the vector width and how long it
 took. It prints nothing that could leak the key. Run it after creating the
 key, and again whenever the provider, model or key changes.
 
-The rest of the stack runs without a key — only the embedding path needs it.
+A valid key on an account with no credit answers **429
+`insufficient_quota`**, not 401 — so "the key is wrong" and "the account is
+empty" look nothing alike, and the script says which it was.
+
+#### Running without a key
+
+Uploading a document needs the Embedding API, because the upload embeds
+its sections before it answers. If you have no key — CI does not, and
+neither does a teammate's checkout — set:
+
+```
+EMBEDDING_PROVIDER=mock
+```
+
+That embeds locally with no account and no network, using the hashing
+trick: every word is hashed into a bucket, so texts that share words land
+near each other. It is enough to run the whole system and to exercise
+retrieval, the top-5 cut and the relevance threshold.
+
+It is **lexical, not semantic**: "annual leave" and "paid time off" mean
+the same thing and share no words, so the mock treats them as unrelated.
+Anything that judges whether the *right* section was found has to run
+against the real provider. It logs a warning every time it is selected, and
+it is never a fall back — an unrecognised `EMBEDDING_PROVIDER` is an error.
+See [TD-27](TECHNICAL-DEBT.md#td-27--the-mock-embedder-is-lexical-not-semantic).
+
+Do not query a collection with one provider after building it with the
+other. The vector widths differ, so ChromaDB refuses the mismatch rather
+than returning nonsense — but delete the collection when switching rather
+than relying on that.
 
 ### 6. Sign-in accounts
 
@@ -293,12 +322,17 @@ The ring counts the bytes going out; when they are all up it changes to
 sections before it answers, and a bar sitting at 100% while that happens
 reads as a hung page.
 
-What a success says is deliberately narrow: **the file is stored and its
-text has been read and split into sections**, and answering questions from
-it also needs the Embedding API, which is not connected yet (ON-41, waiting
-on ON-10). It does not say "searchable", because nothing can reach the
-document yet and that would be the most useful-sounding lie the page could
-tell.
+A success now means all four upload steps finished: **the file is stored,
+its text has been read and split into sections, and those sections can be
+found when an employee asks a question**. Since ON-41 the request also
+embeds every section and writes the vectors to the Vector Database before
+it answers, so a 201 is a promise the whole pipeline ran. If the Embedding
+API or ChromaDB cannot be reached, the upload is refused with a 500 and
+discarded entirely — no row, no file, no sections, no stray vectors —
+rather than storing a document the assistant could never cite.
+
+That is also why uploading needs `EMBEDDING_API_KEY` set, or
+`EMBEDDING_PROVIDER=mock` — see [Running without a key](#running-without-a-key).
 
 A file the browser can already tell is wrong — not a PDF or TXT, or empty —
 is refused without a request being made. A file the server refuses shows
@@ -476,7 +510,8 @@ the next person can re-run them.
 
 A frontend faults file adds `RUNNER = "vitest"` and `ROOT = "frontend"`;
 the harness runs whatever `TESTS` names and a non-zero exit is a non-zero
-exit either way.
+exit either way. `TESTS` may be one path or a list of them, for a component
+whose tests do not fit in a single file.
 
 This has earned its place. Across ON-39 to ON-42 it caught, among others, a
 size limit that read the whole upload before checking it, a 20-second
@@ -515,6 +550,7 @@ backend/
                   Retrieval, Embedding Client, LLM Gateway
       auth/       password hashing, login tokens, the seeded accounts
       documents/  File Storage, text extraction, sections
+      embedding/  the Embedding Client, the hosted API and the mock
       llm/        the LLMProvider interface and the Mock LLM
     vectorstore/  Vector Database (ChromaDB) client
     config.py     settings, read from the environment

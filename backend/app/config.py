@@ -50,6 +50,12 @@ class Settings(BaseSettings):
     # The 20-second timeout the contracts fix belongs to the LLM Gateway.
     embedding_timeout_seconds: float = 10.0
     embedding_api_key: SecretStr | None = None
+    # How many sections go in one request to the Embedding API (ON-41). A
+    # long handbook splits into hundreds of sections and the endpoint takes
+    # a list, so this is the difference between a handful of round trips
+    # and one per section. Larger batches share the one timeout above, so
+    # this trades round trips against how much is lost when one fails.
+    embedding_batch_size: int = 64
 
     # LLM provider selection. "mock" keeps CI and teammates without the
     # model running; see the LLMProvider interface (ON-44) and ON-18.
@@ -139,6 +145,14 @@ class Settings(BaseSettings):
                 "Contracts say the Embedding Client calls the Embedding API "
                 "over HTTPS"
             )
+        return value
+
+    @field_validator("embedding_batch_size")
+    @classmethod
+    def _embedding_batch_size_must_be_positive(cls, value: int) -> int:
+        """A batch of nothing would send no sections and report success."""
+        if value < 1:
+            raise ValueError("EMBEDDING_BATCH_SIZE must be at least 1")
         return value
 
     @property
