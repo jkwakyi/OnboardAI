@@ -17,6 +17,9 @@ dependencies = [
     # no compiler on Windows or in CI; password hashing uses the standard
     # library and adds no dependency at all.
     "pyjwt>=2.9,<3",
+    # Parses multipart/form-data, which is how a document is uploaded
+    # (ON-39). FastAPI needs it present to accept an UploadFile at all.
+    "python-multipart>=0.0.18,<0.1",
 ]
 
 [project.optional-dependencies]
