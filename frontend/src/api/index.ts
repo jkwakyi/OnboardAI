@@ -10,6 +10,8 @@
  */
 export { login } from './auth'
 export { API_BASE_URL, createApiClient, type ApiClient, type RequestOptions } from './client'
+export { FILE_FIELD, uploadDocument, type UploadedDocument } from './documents'
+export { uploadWithProgress, type UploadOptions } from './upload'
 export {
   ApiError,
   NETWORK_MESSAGE,
