@@ -15,15 +15,20 @@ from sqlalchemy import select
 from sqlalchemy.exc import OperationalError
 
 from app.api.auth_check import BEARER
-from app.config import get_settings
-from app.db.models import Document, User
+from app.config import REPO_ROOT, get_settings
+from app.db.models import Document, Section, User
 from app.db.session import get_session
 from app.main import create_app
 from app.services.auth import ensure_account, issue_token
 
 DOCUMENTS = "/api/documents"
-PDF_BYTES = b"%PDF-1.7\n1 0 obj\n<< /Type /Catalog >>\nendobj\ntrailer\n%%EOF\n"
-TXT_BYTES = b"Employees are enrolled in the medical plan on their first day.\n"
+
+# Real handbook documents rather than a stub PDF. Since ON-40 the endpoint
+# reads what it stores, so a few bytes that merely begin "%PDF-" are no
+# longer a document - they are a 422, correctly.
+HANDBOOK = REPO_ROOT / "data" / "handbook"
+PDF_BYTES = (HANDBOOK / "pdf" / "05-benefits-and-wellbeing.pdf").read_bytes()
+TXT_BYTES = (HANDBOOK / "txt" / "05-benefits-and-wellbeing.txt").read_bytes()
 
 
 @pytest.fixture
@@ -234,3 +239,111 @@ def test_the_uploaded_name_is_kept_for_display_but_not_used_as_a_path(api, accou
     document = db_session.scalars(select(Document)).one()
     assert document.filename == "passwd.pdf"
     assert ".." not in document.stored_path
+
+
+# --- the text is extracted and split (ON-40, U3) -----------------------
+
+
+def test_an_uploaded_document_is_split_into_sections(api, accounts, db_session):
+    """U3. Until this, an upload was a file nothing could ever cite."""
+    upload(api, accounts, TXT_BYTES, name="benefits.txt", kind="text/plain")
+
+    document = db_session.scalars(select(Document)).one()
+    sections = db_session.scalars(
+        select(Section).where(Section.document_id == document.id).order_by(Section.position)
+    ).all()
+
+    assert len(sections) > 1
+    assert [section.position for section in sections] == list(range(len(sections)))
+    assert any(section.heading and section.heading.startswith("5.") for section in sections)
+    assert all(section.text.strip() for section in sections)
+
+
+def test_a_pdf_is_split_too(api, accounts, db_session):
+    upload(api, accounts, PDF_BYTES, name="benefits.pdf")
+
+    document = db_session.scalars(select(Document)).one()
+    sections = db_session.scalars(select(Section)).all()
+
+    assert sections
+    assert all(section.document_id == document.id for section in sections)
+
+
+def test_a_pdf_with_no_readable_text_is_a_422(api, accounts, db_session, storage, tmp_path):
+    """A scan. The upload fails rather than succeeding uselessly: an HR
+    administrator should not be told a document is approved when nothing
+    can be read from it."""
+    from reportlab.pdfgen import canvas
+
+    path = tmp_path / "scan.pdf"
+    page = canvas.Canvas(str(path))
+    page.rect(100, 100, 200, 200, fill=0)
+    page.save()
+
+    response = upload(api, accounts, path.read_bytes(), name="scan.pdf")
+
+    assert response.status_code == 422
+    assert "text recognition" in response.json()["detail"]
+
+
+def test_a_document_that_cannot_be_read_leaves_nothing_behind(
+    api, accounts, db_session, storage, tmp_path
+):
+    """No row, no file, no sections. A document that was stored but never
+    split is one retrieval can never find and the Admin Upload Page would
+    still list."""
+    from reportlab.pdfgen import canvas
+
+    path = tmp_path / "scan.pdf"
+    page = canvas.Canvas(str(path))
+    page.rect(100, 100, 200, 200, fill=0)
+    page.save()
+
+    upload(api, accounts, path.read_bytes(), name="scan.pdf")
+
+    assert db_session.scalars(select(Document)).all() == []
+    assert db_session.scalars(select(Section)).all() == []
+    assert not storage.exists() or list(storage.glob("*")) == []
+
+
+def test_a_failed_split_leaves_nothing_behind(api, accounts, db_session, storage, monkeypatch):
+    """Not only the refusals: an unexpected error in indexing must undo the
+    upload too, or the two halves disagree."""
+
+    def explode(*args, **kwargs):
+        raise RuntimeError("the splitter fell over")
+
+    monkeypatch.setattr("app.api.documents.index_document", explode)
+
+    response = upload(api, accounts, PDF_BYTES)
+
+    assert response.status_code == 500
+    assert db_session.scalars(select(Document)).all() == []
+    assert list(storage.glob("*")) == []
+
+
+def test_every_kind_of_refusal_has_a_status_code():
+    """A fifth refusal added without a row here would become a 400 by
+    default, which is the wrong answer for most of the things it could be."""
+    from app.api.documents import REFUSAL_STATUS
+    from app.services.documents import UploadRefused
+
+    kinds = set()
+    pending = [UploadRefused]
+    while pending:
+        for subclass in pending.pop().__subclasses__():
+            kinds.add(subclass)
+            pending.append(subclass)
+
+    assert kinds == set(REFUSAL_STATUS)
+
+
+def test_a_document_of_nothing_but_separators_is_a_422(api, accounts, db_session, storage):
+    """The reachable path into "no sections": a TXT file that is not empty
+    as bytes but holds no text once the rule lines are dropped."""
+    response = upload(api, accounts, b"-----\n=====\n-----\n", name="rules.txt", kind="text/plain")
+
+    assert response.status_code == 422
+    assert db_session.scalars(select(Document)).all() == []
+    assert db_session.scalars(select(Section)).all() == []
+    assert not storage.exists() or list(storage.glob("*")) == []
