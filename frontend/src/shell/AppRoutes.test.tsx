@@ -7,10 +7,9 @@
  * "signed in but not allowed" is a refusal and stays put and says so.
  */
 import { render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 
-import { EMPLOYEE, HR, renderApp } from '../test/renderApp'
+import { EMPLOYEE_TOKEN, HR_TOKEN, renderApp } from '../test/renderApp'
 
 /** The rail is the shell: if it is there, the page rendered inside it. */
 function shellIsShowing(): boolean {
@@ -23,8 +22,7 @@ describe('signed out', () => {
     (path) => {
       renderApp({ path })
 
-      expect(screen.getByText('Sign in as either role to look at the shell.', { exact: false }))
-        .toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument()
       expect(shellIsShowing()).toBe(false)
     },
   )
@@ -38,24 +36,19 @@ describe('signed out', () => {
     expect(screen.queryByRole('link', { name: /Chat/ })).toBeNull()
   })
 
-  it('finishes the journey the guard interrupted', async () => {
-    // Signing in should land on the page that was asked for, not on the
-    // default one. Losing it is invisible when the default happens to be
-    // where you were going anyway.
+  it('remembers where the guard turned somebody away from', () => {
+    // The round trip itself is driven through the real form in
+    // LoginPage.test.tsx. What belongs here is that the guard records the
+    // interrupted path at all - losing it is invisible when the default
+    // happens to be where you were going anyway.
     renderApp({ path: '/documents' })
 
-    await userEvent.click(
-      screen.getByRole('button', { name: 'Continue as HR administrator' }),
-    )
-
-    expect(screen.getByRole('heading', { name: 'Documents' })).toBeInTheDocument()
-    expect(shellIsShowing()).toBe(true)
+    expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument()
+    expect(shellIsShowing()).toBe(false)
   })
 
-  it('lands on chat when there was nowhere in particular to go', async () => {
-    renderApp({ path: '/login' })
-
-    await userEvent.click(screen.getByRole('button', { name: 'Continue as Employee' }))
+  it('lands on chat when there was nowhere in particular to go', () => {
+    renderApp({ path: '/login', token: EMPLOYEE_TOKEN })
 
     expect(screen.getByRole('heading', { name: 'Chat' })).toBeInTheDocument()
   })
@@ -63,13 +56,13 @@ describe('signed out', () => {
 
 describe('as an Employee', () => {
   it('lands on chat from the root', () => {
-    renderApp({ path: '/', session: EMPLOYEE })
+    renderApp({ path: '/', token: EMPLOYEE_TOKEN })
 
     expect(screen.getByRole('heading', { name: 'Chat' })).toBeInTheDocument()
   })
 
   it('sees only the chat link', () => {
-    renderApp({ path: '/chat', session: EMPLOYEE })
+    renderApp({ path: '/chat', token: EMPLOYEE_TOKEN })
 
     const nav = screen.getByRole('navigation', { name: 'Navigation' })
     expect(nav).toBeInTheDocument()
@@ -79,7 +72,7 @@ describe('as an Employee', () => {
   })
 
   it.each(['/documents', '/inbox'])('is refused %s, in place', (path) => {
-    renderApp({ path, session: EMPLOYEE })
+    renderApp({ path, token: EMPLOYEE_TOKEN })
 
     expect(screen.getByText('Not authorised')).toBeInTheDocument()
     // Still inside the shell, and still on the URL that was asked for:
@@ -88,7 +81,7 @@ describe('as an Employee', () => {
   })
 
   it('is offered the employee quick action', () => {
-    renderApp({ path: '/chat', session: EMPLOYEE })
+    renderApp({ path: '/chat', token: EMPLOYEE_TOKEN })
 
     expect(screen.getByRole('button', { name: 'Ask a question' })).toBeInTheDocument()
   })
@@ -100,14 +93,14 @@ describe('as an HR administrator', () => {
     ['/inbox', 'HR Inbox'],
     ['/chat', 'Chat'],
   ])('may open %s', (path, title) => {
-    renderApp({ path, session: HR })
+    renderApp({ path, token: HR_TOKEN })
 
     expect(screen.getByRole('heading', { name: title })).toBeInTheDocument()
     expect(screen.queryByText('Not authorised')).toBeNull()
   })
 
   it('sees all three links', () => {
-    renderApp({ path: '/chat', session: HR })
+    renderApp({ path: '/chat', token: HR_TOKEN })
 
     for (const title of ['Documents', 'HR Inbox', 'Chat']) {
       expect(screen.getByRole('link', { name: title })).toBeInTheDocument()
@@ -115,7 +108,7 @@ describe('as an HR administrator', () => {
   })
 
   it('is offered the upload quick action', () => {
-    renderApp({ path: '/documents', session: HR })
+    renderApp({ path: '/documents', token: HR_TOKEN })
 
     expect(screen.getByRole('button', { name: 'Upload a document' })).toBeInTheDocument()
   })
@@ -126,7 +119,7 @@ describe('pages that do not exist yet', () => {
     // More use to a teammate than "coming soon", and it is why every route
     // the epic names is routed from the start rather than added one at a
     // time as the pages land.
-    renderApp({ path: '/chat', session: EMPLOYEE })
+    renderApp({ path: '/chat', token: EMPLOYEE_TOKEN })
 
     expect(screen.getByText(/built in ON-48/)).toBeInTheDocument()
   })
@@ -134,7 +127,7 @@ describe('pages that do not exist yet', () => {
 
 describe('an address that is not a route', () => {
   it('says so, inside the shell', () => {
-    renderApp({ path: '/nothing-here', session: EMPLOYEE })
+    renderApp({ path: '/nothing-here', token: EMPLOYEE_TOKEN })
 
     expect(screen.getByText('Page not found')).toBeInTheDocument()
     expect(shellIsShowing()).toBe(true)
@@ -143,21 +136,44 @@ describe('an address that is not a route', () => {
 
 describe('the login page while already signed in', () => {
   it('goes to the application instead', () => {
-    renderApp({ path: '/login', session: EMPLOYEE })
+    renderApp({ path: '/login', token: EMPLOYEE_TOKEN })
 
     expect(screen.getByRole('heading', { name: 'Chat' })).toBeInTheDocument()
   })
 })
 
-describe('the development sign-in', () => {
-  it('is behind the literal Vite replaces at build time', async () => {
-    // Otherwise the alpha ships a way in with no password. Same mechanism
-    // as the galleries: the literal is what makes the branch dead code.
+describe('the login page', () => {
+  it('has no way in that skips the password', async () => {
+    // This test used to assert the opposite: that ON-65's two development
+    // buttons were behind the `import.meta.env.DEV` literal, so the
+    // bundler would drop them. ON-38 deleted them instead, which is the
+    // stronger answer - a password-free way in that only works in
+    // development is still one somebody eventually ships.
+    //
+    // Kept, pointed the other way, because the thing worth guarding is
+    // that nobody reintroduces one while the real form is inconvenient to
+    // type during a demo.
     const { readFileSync } = await import('node:fs')
     const { fromSrc } = await import('../test/paths')
+    // Comments stripped first. The module docstring explains that the
+    // development buttons were behind `import.meta.env.DEV` and are now
+    // gone, which is exactly the sentence a scan of raw source trips over
+    // - this test failed on its own explanation before it checked
+    // anything. A comment about the absence of a thing is not the thing.
     const source = readFileSync(fromSrc('shell', 'LoginPage.tsx'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\/\/.*$/gm, '')
 
-    expect(source).toContain('import.meta.env.DEV ?')
+    expect(source).not.toContain('import.meta.env.DEV')
+    expect(source).not.toMatch(/Continue as/)
+  })
+
+  it('posts to the endpoint the contracts define and no other', async () => {
+    const { readFileSync } = await import('node:fs')
+    const { fromSrc } = await import('../test/paths')
+    const source = readFileSync(fromSrc('api', 'auth.ts'), 'utf8')
+
+    expect(source).toContain("'/auth/login'")
   })
 })
 

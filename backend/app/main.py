@@ -9,6 +9,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import api_router
 from app.config import get_settings
@@ -56,6 +57,30 @@ def create_app() -> FastAPI:
         version="0.1.0",
         lifespan=lifespan,
     )
+
+    # The React app is served from a different origin in development - Vite
+    # on 5173, this on 8000 - so without this every request from the
+    # browser is blocked before it is sent, and the failure reads as "the
+    # server could not be reached" rather than as a CORS problem. Nothing
+    # in the test suite can catch that: every frontend test stubs fetch,
+    # and the browser is the only thing that enforces the rule.
+    #
+    # Named origins, never "*". The API is read with an Authorization
+    # header, and a wildcard origin says any site may call it.
+    settings = get_settings()
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.allowed_origins,
+        # False because the token travels in a header rather than a cookie.
+        # Turning it on would be the setting that makes a wildcard origin
+        # dangerous, and we want neither.
+        allow_credentials=False,
+        allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type"],
+        # So a 429 from the login limit can be acted on by the browser.
+        expose_headers=["Retry-After"],
+    )
+
     app.include_router(api_router)
     return app
 
