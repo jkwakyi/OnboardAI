@@ -241,6 +241,25 @@ Contracts say comes back. Everything the Login Page needs to render — the
 holder's name and role — is already in the token's claims, and Auth Check
 (ON-14) is what enforces the role on every later request.
 
+Send that token back on every other request:
+
+```bash
+curl http://localhost:8000/api/documents -H "Authorization: Bearer $TOKEN"
+```
+
+Auth Check sits in front of every endpoint under `/api` and checks the token
+and the role before the endpoint runs — `backend/app/api/auth_check.py` has
+one table naming which roles may reach each of the nine endpoints, and an
+endpoint missing from it is refused rather than allowed. No token is a
+`401`; an expired one is a `401` saying the session ended; the right token
+with the wrong role is a `403`. Only `POST /api/auth/login` is public. What
+Auth Check deliberately does *not* decide is which records come back, which
+is
+[TD-21](TECHNICAL-DEBT.md#td-21--auth-check-guards-routes-not-rows).
+
+`/docs` has an **Authorize** button: paste a token there and the generated
+documentation will send it for you.
+
 Bad credentials are a `401` with the same message whichever way they are
 wrong; a malformed body is a `422`, including one carrying a field the
 contracts do not define. Ten failures from one address, or from one client,
