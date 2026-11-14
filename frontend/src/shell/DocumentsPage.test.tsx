@@ -268,10 +268,13 @@ describe('when the upload succeeds', () => {
     expect(await screen.findByText(SUCCESS_TITLE)).toBeInTheDocument()
   })
 
-  it('does not claim the document can answer questions yet', async () => {
-    // Turning the sections into vectors is U4, which is ON-41, which is
-    // waiting on the Embedding API key (ON-10). Saying "searchable" here
-    // would be the most useful-sounding lie this page could tell.
+  it('says the document can now be found', async () => {
+    // Until ON-41 this asserted the opposite: U4 did not exist, so the
+    // page had to say the document could not answer questions yet. The
+    // upload now embeds its sections before it answers at all - a 201
+    // means the vectors are stored - so the careful wording has become
+    // the lie, and claiming less than is true sends an HR administrator
+    // off to re-upload a document that was fine.
     open()
     const xhr = await startUpload()
 
@@ -280,7 +283,7 @@ describe('when the upload succeeds', () => {
     })
 
     expect(await screen.findByText(SUCCESS_DETAIL)).toBeInTheDocument()
-    expect(screen.queryByText(/searchable/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/not connected/i)).not.toBeInTheDocument()
   })
 
   it('shows what the server recorded, not what was chosen', async () => {

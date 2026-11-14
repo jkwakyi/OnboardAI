@@ -7,9 +7,10 @@ not testing anything, and finding that out is the point.
 
     python tools/inject/inject.py faults/ON-45.py
 
-A faults file sets `TESTS` (what to run), `FAULTS` (a list of
-`(description, path, before, after)`) and, for the frontend, `ROOT` and
-`RUNNER`. Paths are relative to `ROOT`, which defaults to `backend`.
+A faults file sets `TESTS` (what to run - one path, or a list of them),
+`FAULTS` (a list of `(description, path, before, after)`) and, for the
+frontend, `ROOT` and `RUNNER`. Paths are relative to `ROOT`, which defaults
+to `backend`.
 
 Why this exists as a file rather than being retyped per ticket
 -------------------------------------------------------------
@@ -100,20 +101,30 @@ def write(path: Path, text: str, newline: str) -> None:
     path.write_bytes(text.replace("\n", newline).encode("utf-8"))
 
 
-def command_for(runner: str, target: str) -> list[str]:
+def targets_of(target: str | list[str]) -> list[str]:
+    """`TESTS` as a list, so a faults file may name several files.
+
+    A component whose faults live in one module usually has one test file;
+    the Embedding Client (ON-41) has five, and running the whole suite
+    thirty times instead would turn one pass into an overnight job.
+    """
+    return [target] if isinstance(target, str) else list(target)
+
+
+def command_for(runner: str, target: str | list[str]) -> list[str]:
     if runner == "pytest":
         return [
-            str(PYTHON), "-m", "pytest", target,
+            str(PYTHON), "-m", "pytest", *targets_of(target),
             "-q", "-x", "--no-header", "-p", "no:cacheprovider",
         ]
     if runner == "vitest":
         # `npx` rather than a path, because node_modules/.bin differs
         # between Windows and the Linux CI runs.
-        return ["npx", "--yes", "vitest", "run", target, "--silent"]
+        return ["npx", "--yes", "vitest", "run", *targets_of(target), "--silent"]
     raise ValueError(f"unknown runner: {runner!r}")
 
 
-def run(runner: str, root: Path, target: str) -> bool:
+def run(runner: str, root: Path, target: str | list[str]) -> bool:
     """True if the tests pass."""
     result = subprocess.run(
         command_for(runner, target),

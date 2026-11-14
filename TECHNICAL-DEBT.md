@@ -43,6 +43,8 @@ See [How to add an entry](#how-to-add-an-entry).
 | [TD-24](#td-24--the-login-token-is-readable-by-script-on-the-page) | The login token is readable by script on the page | Frontend | Accepted |
 | [TD-25](#td-25--the-admin-upload-page-uses-one-of-its-three-endpoints) | The Admin Upload Page uses one of its three endpoints | Frontend | Open |
 | [TD-26](#td-26--an-upload-cannot-be-cancelled) | An upload cannot be cancelled | Frontend | Open |
+| [TD-27](#td-27--the-mock-embedder-is-lexical-not-semantic) | The Mock Embedder is lexical, not semantic | Backend | Open |
+| [TD-28](#td-28--vectors-are-written-outside-the-sql-transaction) | Vectors are written outside the SQL transaction | Backend | Open |
 
 Status is **Open** (we intend to pay it back), **Accepted** (we have decided
 to live with it, and the entry says why), or **Mitigated** (paid back; kept
@@ -888,3 +890,83 @@ the file somebody chose. The abort path is covered by tests
 (`api/upload.test.ts`) rather than left to rot, so wiring a button is a
 small change when the question above has an answer — which it will have
 once `DELETE /api/documents/{id}` exists.
+
+### TD-27 — The Mock Embedder is lexical, not semantic
+
+**Taken:** 14 November 2026, in ON-41 · **Status:** Open · **Ticket:** none
+
+**What.** `EMBEDDING_PROVIDER=mock` embeds with the hashing trick: each
+word is hashed into one of `EMBEDDING_DIMENSIONS` buckets with a sign, and
+the vector is scaled to unit length. Two texts that share words land near
+each other; two that share none do not. That is a **lexical** similarity,
+not a semantic one. "Annual leave" and "paid time off" mean the same thing
+and share no words, so the mock treats them as unrelated — which is the
+entire job a real embedding model does.
+
+**Why.** CLAUDE.md fixes the rule for the LLM: "Keep the Mock LLM
+selectable by configuration so CI and teammates without the model can still
+run the system." The Embedding API needs the same thing and needs it more.
+The LLM is a local model somebody might happen to have; the Embedding API
+is a paid hosted service with one key on one machine. Without a stand-in,
+CI cannot exercise the upload flow at all, Brad and Muhammed cannot run the
+application they are building, and every retrieval test would be a billable
+round trip. A real local embedding model was the alternative and is not
+one: it would make `nomic-embed-text` a dependency of CI, at a different
+vector width, and ON-10 settled that the Embedding API is hosted.
+
+**Impact.** Retrieval *mechanics* can be tested against the mock — the
+top-5 cut, the relevance threshold, the fallback below it, the shape of a
+citation. Retrieval *quality* cannot. A question whose wording differs from
+the handbook's will score badly under the mock and may well score fine
+under the real provider, so a threshold tuned against the mock would be
+tuned against the wrong distribution. Anything that judges whether the
+right section was found (ON-24's evaluation questions in particular) has to
+run against `EMBEDDING_PROVIDER=openai` or it is measuring the mock.
+
+**Mitigation.** It cannot be selected by accident: `EMBEDDING_PROVIDER`
+defaults to `openai`, an unknown name is an error rather than a fall back,
+and choosing `mock` logs a warning every time saying retrieval quality is
+not representative. `.env.example` says the same. A collection built with
+one provider must not be queried with the other, which is a real hazard
+with no guard yet — the vector widths happen to differ (1536 against
+whatever `EMBEDDING_DIMENSIONS` is set to for the mock), so ChromaDB
+refuses the mismatch rather than returning nonsense, but that is luck
+rather than design.
+
+### TD-28 — Vectors are written outside the SQL transaction
+
+**Taken:** 14 November 2026, in ON-41 · **Status:** Open · **Ticket:** none
+
+**What.** An upload writes to two stores that know nothing about each
+other: the sections go to the Main Database and commit (U3), then the
+vectors go to the Vector Database (U4). There is no transaction spanning
+the two. If the process dies between the commit and the last batch of
+vectors, the document and its sections exist and some of its vectors do
+not, and nothing afterwards notices.
+
+**Why.** ChromaDB has no transactions and nothing to enlist in a
+PostgreSQL one, so a genuine two-phase commit is not available at any
+price. The alternatives were to write the vectors first — which trades
+orphaned vectors for orphaned sections, the worse of the two, because
+vectors are what retrieval searches — or to make U4 a background job with
+a retry, which is a queue, a worker and a visible "indexing" state on the
+Admin Upload Page, none of which the Interface Contracts define and all of
+which the contracts' single U1-to-U4 flow argues against.
+
+**Impact.** The failure that is handled: if U4 raises, the endpoint
+discards the whole upload — row, file, sections and any vectors already
+written — and answers 500, so an HR administrator is told it did not work.
+That path is tested, including the half-written case. The failure that is
+not handled: the process being killed mid-write, where the discard never
+runs. The result is a document listed on the Admin Upload Page whose later
+sections can never be retrieved, with nothing to distinguish it from one
+that indexed cleanly. Nothing reconciles the two stores, and nothing counts
+them.
+
+**Mitigation.** The write is idempotent — `upsert` keyed by section id, so
+re-running U4 for a document is always safe and never duplicates. That
+makes the repair trivial once something asks for it; what is missing is the
+asking. A reconciliation command (count sections against vectors per
+document, re-embed the difference) is perhaps thirty lines on top of what
+ON-41 already provides, and `DELETE /api/documents/{id}` in ON-16 has to
+call `forget_document` anyway, so the same ground gets walked again there.
