@@ -55,6 +55,19 @@ class Settings(BaseSettings):
     # model running; see the LLMProvider interface (ON-44) and ON-18.
     llm_provider: str = "mock"
 
+    # Which origins the browser may call this API from (ON-38).
+    #
+    # Comma-separated, because a .env file holding JSON is a .env file
+    # people get wrong. Both Vite ports by default: it moves to 5174 when
+    # 5173 is taken, which happens whenever a second dev server is already
+    # running, and a CORS failure looks exactly like the backend being down.
+    #
+    # Never "*". The browser will not send an Authorization header to a
+    # wildcard origin with credentials, and more to the point a wildcard
+    # says any site may call this API with whatever token the person
+    # holding it has.
+    cors_allowed_origins: str = "http://localhost:5173,http://localhost:5174"
+
     # Auth Service (ON-36): the key login tokens are signed with. Secret,
     # server-side only, never in the React app. Unset is allowed outside
     # production, where the Auth Service signs with a random per-process key
@@ -127,6 +140,11 @@ class Settings(BaseSettings):
                 "over HTTPS"
             )
         return value
+
+    @property
+    def allowed_origins(self) -> list[str]:
+        """The CORS origins, as a list, with blanks dropped."""
+        return [origin.strip() for origin in self.cors_allowed_origins.split(",") if origin.strip()]
 
     @property
     def storage_path(self) -> Path:
