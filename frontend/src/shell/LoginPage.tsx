@@ -1,39 +1,44 @@
 /**
- * The login page (ON-65's placeholder for ON-38).
+ * The login page (ON-38).
  *
  * Outside the shell: there is nothing to navigate to until someone is
  * signed in.
  *
- * ON-38 builds the real form against POST /api/auth/login and handles the
- * token. Until then this page signs you in to a stubbed session so the
- * shell, the navigation and the guards can be built and looked at - and
- * so that both roles can be seen, which is most of what there is to check
- * about a role-based layout.
- *
- * Those two buttons are behind `import.meta.env.DEV`, which Vite replaces
- * with `false` when it builds, so they are dead code the bundler drops
- * rather than a way into the alpha with no password. A test checks the
- * literal is still there.
+ * This replaces the two development buttons ON-65 shipped behind
+ * `import.meta.env.DEV`. There is now a real Auth Service, a real endpoint
+ * and a real token, so the stub is gone rather than kept alongside — a
+ * password-free way in that only works in development is still a
+ * password-free way in that somebody will eventually ship. That closes
+ * TD-18.
  */
+import { useState, type FormEvent } from 'react'
 import { Navigate, useLocation } from 'react-router'
 
-import { Button, Card, EmptyState } from '../components'
-import { UserRound } from '../components/icons'
-import type { Role } from '../session/roles'
+import { login } from '../api/auth'
+import { ApiError, NetworkError } from '../api/errors'
+import { Button, Card, FormField } from '../components'
 import { useSession } from '../session/SessionContext'
 import type { FromLocation } from './guards'
 import { DEFAULT_PATH } from './navigation'
 import './LoginPage.css'
 
-/** Who you are while there is no Auth Service. Development only. */
-const STUB_NAMES: Record<Role, string> = {
-  employee: 'Development Employee',
-  hr_administrator: 'Development HR administrator',
-}
+/**
+ * What to say when the backend accepted the credentials and handed back a
+ * token this frontend cannot use. Rare, and worth its own message: the
+ * person did nothing wrong and retrying will not help, so "wrong password"
+ * would send them looking in the wrong place.
+ */
+export const UNUSABLE_TOKEN_MESSAGE =
+  'Signing in worked, but the server sent a session this page could not read. Please tell the team.'
 
 export default function LoginPage() {
   const { session, signIn } = useSession()
   const location = useLocation()
+
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [problem, setProblem] = useState<string | null>(null)
+  const [signingIn, setSigningIn] = useState(false)
 
   // Where the guard turned them away from, so signing in finishes the
   // journey they started rather than dropping them on the default page.
@@ -47,8 +52,27 @@ export default function LoginPage() {
     return <Navigate replace to={from} />
   }
 
-  function continueAs(role: Role): void {
-    signIn({ fullName: STUB_NAMES[role], role })
+  async function submit(event: FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault()
+    setProblem(null)
+    setSigningIn(true)
+
+    try {
+      const token = await login(email, password)
+      if (!signIn(token)) {
+        setProblem(UNUSABLE_TOKEN_MESSAGE)
+      }
+      // On success nothing else happens here: the session changes, this
+      // component renders again, and the <Navigate> above does the rest.
+    } catch (failure) {
+      if (failure instanceof ApiError || failure instanceof NetworkError) {
+        setProblem(failure.message)
+      } else {
+        throw failure
+      }
+    } finally {
+      setSigningIn(false)
+    }
   }
 
   return (
@@ -59,32 +83,43 @@ export default function LoginPage() {
           Ask about company policy and get an answer with its source.
         </p>
 
-        {import.meta.env.DEV ? (
-          <Card accent="info" label="Development sign-in">
-            <p className="login__note">
-              There is no Auth Service yet (ON-36) and no login form (ON-38).
-              Sign in as either role to look at the shell.
-            </p>
-            <div className="login__roles">
-              <Button icon={<UserRound />} onClick={() => continueAs('employee')}>
-                Continue as Employee
-              </Button>
-              <Button
-                icon={<UserRound />}
-                onClick={() => continueAs('hr_administrator')}
-                variant="secondary"
-              >
-                Continue as HR administrator
-              </Button>
-            </div>
-          </Card>
-        ) : (
-          <EmptyState
-            description="The sign-in form is built in ON-38, against POST /api/auth/login."
-            icon={<UserRound />}
-            title="Sign-in is not available yet"
-          />
-        )}
+        <Card label="Sign in">
+          <form className="login__form" noValidate onSubmit={submit}>
+            <FormField
+              autoComplete="username"
+              id="login-email"
+              label="Email address"
+              name="email"
+              onChange={(event) => setEmail(event.target.value)}
+              required
+              type="email"
+              value={email}
+            />
+            <FormField
+              autoComplete="current-password"
+              id="login-password"
+              label="Password"
+              name="password"
+              onChange={(event) => setPassword(event.target.value)}
+              required
+              type="password"
+              value={password}
+            />
+
+            {/* role="alert" so it is announced when it appears, rather than
+                being a change somebody using a screen reader has to go
+                looking for. */}
+            {problem !== null && (
+              <p className="login__problem" role="alert">
+                {problem}
+              </p>
+            )}
+
+            <Button loading={signingIn} type="submit">
+              Sign in
+            </Button>
+          </form>
+        </Card>
       </div>
     </main>
   )
