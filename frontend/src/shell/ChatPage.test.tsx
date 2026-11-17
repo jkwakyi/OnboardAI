@@ -22,7 +22,15 @@ import userEvent from '@testing-library/user-event'
 
 import { MAX_QUESTION_CHARACTERS } from '../api'
 import { EMPLOYEE_TOKEN, HR_TOKEN, renderApp } from '../test/renderApp'
-import { EMPTY_TITLE, FALLBACK_LABEL, WAITING_LABEL, canRetry, citationLabels } from './ChatPage'
+import {
+  EMPTY_TITLE,
+  FALLBACK_LABEL,
+  SENT_TO_HR_LABEL,
+  SEND_TO_HR_LABEL,
+  WAITING_LABEL,
+  canRetry,
+  citationLabels,
+} from './ChatPage'
 import { ApiError, NetworkError } from '../api'
 
 /** What the backend actually answers with, from ON-47's `AskResponse`. */
@@ -342,6 +350,185 @@ it('reads the fallback flag rather than guessing from empty citations', async ()
 
   expect(await screen.findByText('A real answer.')).toBeInTheDocument()
   expect(screen.queryByText(FALLBACK_LABEL)).not.toBeInTheDocument()
+})
+
+// --- Send to HR (ON-20, E1) ---------------------------------------------------
+
+/** What POST /api/escalations answers with. */
+const ESCALATION = {
+  id: 4,
+  chat_log_id: FELL_BACK.id,
+  question: 'What is the airspeed velocity of an unladen swallow?',
+  status: 'open',
+  created_at: '2026-11-17T12:00:00Z',
+}
+
+async function askAndFallBack() {
+  fetchMock.mockImplementationOnce(async () => jsonResponse(FELL_BACK))
+  open()
+  const user = await ask()
+  await screen.findByText(FELL_BACK.answer)
+  return user
+}
+
+it('offers Send to HR on a fallback', async () => {
+  await askAndFallBack()
+
+  expect(screen.getByRole('button', { name: SEND_TO_HR_LABEL })).toBeInTheDocument()
+})
+
+it('does not offer Send to HR on an answer', async () => {
+  /**
+   * The button is for a question that was not answered. On an answered
+   * one it invites somebody to send HR a question they already have the
+   * answer to - and the backend refuses it with a 409, so the only thing
+   * offering it achieves is a dead end.
+   */
+  open()
+  await ask()
+  await screen.findByText(ANSWERED.answer)
+
+  expect(screen.queryByRole('button', { name: SEND_TO_HR_LABEL })).not.toBeInTheDocument()
+})
+
+it('sends the chat log id, and not the question', async () => {
+  /**
+   * The server reads what was asked out of the chat log. Sending a
+   * question from here would be sending text a caller chose, which is
+   * how HR's inbox fills with questions nobody asked.
+   */
+  const user = await askAndFallBack()
+  fetchMock.mockImplementationOnce(async () => jsonResponse(ESCALATION, 201))
+
+  await user.click(screen.getByRole('button', { name: SEND_TO_HR_LABEL }))
+
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
+  const [url, init] = fetchMock.mock.calls[1] as [string, RequestInit]
+  expect(url).toMatch(/\/escalations$/)
+  expect(init.method).toBe('POST')
+  expect(JSON.parse(init.body as string)).toEqual({ chat_log_id: FELL_BACK.id })
+})
+
+it('says the question is with HR once it is sent', async () => {
+  const user = await askAndFallBack()
+  fetchMock.mockImplementationOnce(async () => jsonResponse(ESCALATION, 201))
+
+  await user.click(screen.getByRole('button', { name: SEND_TO_HR_LABEL }))
+
+  expect(await screen.findByText(new RegExp(SENT_TO_HR_LABEL))).toBeInTheDocument()
+  // By selector, because the sentence spans a <strong> inside its
+  // <span>, so both the span and its <p> match the text.
+  expect(screen.getByText(/will reply to you here/i, { selector: 'span' })).toBeInTheDocument()
+})
+
+it('announces that the question reached HR', async () => {
+  /**
+   * The button the person just pressed disappears, which on a screen
+   * reader can mean focus lands nowhere and nothing is said - so the
+   * only thing confirming the press is a live region. Found by fault
+   * injection: every other test here reads the text, and the text is
+   * there whether or not anybody is told about it.
+   */
+  const user = await askAndFallBack()
+  fetchMock.mockImplementationOnce(async () => jsonResponse(ESCALATION, 201))
+
+  await user.click(screen.getByRole('button', { name: SEND_TO_HR_LABEL }))
+
+  const confirmation = await screen.findByText(/will reply to you here/i, { selector: 'span' })
+  expect(confirmation).toHaveAttribute('aria-live', 'polite')
+})
+
+it('replaces the button rather than disabling it', async () => {
+  /**
+   * A disabled button says "you cannot do this". What is true is "this
+   * is done", and the two look identical while meaning opposite things.
+   */
+  const user = await askAndFallBack()
+  fetchMock.mockImplementationOnce(async () => jsonResponse(ESCALATION, 201))
+
+  await user.click(screen.getByRole('button', { name: SEND_TO_HR_LABEL }))
+  await screen.findByText(new RegExp(SENT_TO_HR_LABEL))
+
+  expect(screen.queryByRole('button', { name: SEND_TO_HR_LABEL })).not.toBeInTheDocument()
+})
+
+it('cannot be pressed twice while it is being sent', async () => {
+  const user = await askAndFallBack()
+  const held = pending()
+
+  await user.click(screen.getByRole('button', { name: SEND_TO_HR_LABEL }))
+
+  expect(screen.getByRole('button', { name: SEND_TO_HR_LABEL })).toBeDisabled()
+  held.resolve(ESCALATION)
+})
+
+it('reports a failure to send and leaves the button there to try again', async () => {
+  const user = await askAndFallBack()
+  fetchMock.mockImplementationOnce(() => Promise.reject(new TypeError('Failed to fetch')))
+
+  await user.click(screen.getByRole('button', { name: SEND_TO_HR_LABEL }))
+
+  expect(await screen.findByRole('alert')).toHaveTextContent(/could not be reached/i)
+  expect(screen.getByRole('button', { name: SEND_TO_HR_LABEL })).toBeEnabled()
+})
+
+it('shows the backend wording when it refuses to escalate', async () => {
+  const user = await askAndFallBack()
+  fetchMock.mockImplementationOnce(async () =>
+    jsonResponse({ detail: 'That answer could not be found.' }, 404),
+  )
+
+  await user.click(screen.getByRole('button', { name: SEND_TO_HR_LABEL }))
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('That answer could not be found.')
+})
+
+it('sends only the fallback that was pressed', async () => {
+  /**
+   * Two fallbacks in the transcript, one sent. The other must still
+   * offer its button - sharing one piece of state between them would
+   * mark both as sent and lose the second question entirely.
+   */
+  fetchMock.mockImplementationOnce(async () => jsonResponse(FELL_BACK))
+  open()
+  const user = await ask('First unanswerable question')
+  await screen.findByText(FELL_BACK.answer)
+
+  fetchMock.mockImplementationOnce(async () =>
+    jsonResponse({ ...FELL_BACK, id: 99, answer: 'A second fallback answer.' }),
+  )
+  await user.type(screen.getByLabelText('Your question'), 'Second unanswerable question')
+  await user.click(screen.getByRole('button', { name: 'Send' }))
+  await screen.findByText('A second fallback answer.')
+
+  fetchMock.mockImplementationOnce(async () => jsonResponse(ESCALATION, 201))
+  const buttons = screen.getAllByRole('button', { name: SEND_TO_HR_LABEL })
+  expect(buttons).toHaveLength(2)
+  await user.click(buttons[0])
+  await screen.findByText(new RegExp(SENT_TO_HR_LABEL))
+
+  expect(screen.getAllByRole('button', { name: SEND_TO_HR_LABEL })).toHaveLength(1)
+})
+
+it('sends the id of the fallback it belongs to, not the newest one', async () => {
+  fetchMock.mockImplementationOnce(async () => jsonResponse(FELL_BACK))
+  open()
+  const user = await ask('First unanswerable question')
+  await screen.findByText(FELL_BACK.answer)
+
+  fetchMock.mockImplementationOnce(async () =>
+    jsonResponse({ ...FELL_BACK, id: 99, answer: 'A second fallback answer.' }),
+  )
+  await user.type(screen.getByLabelText('Your question'), 'Second unanswerable question')
+  await user.click(screen.getByRole('button', { name: 'Send' }))
+  await screen.findByText('A second fallback answer.')
+
+  fetchMock.mockImplementationOnce(async () => jsonResponse(ESCALATION, 201))
+  await user.click(screen.getAllByRole('button', { name: SEND_TO_HR_LABEL })[0])
+
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3))
+  const [, init] = fetchMock.mock.calls[2] as [string, RequestInit]
+  expect(JSON.parse(init.body as string)).toEqual({ chat_log_id: FELL_BACK.id })
 })
 
 // --- failures, which are failures ---------------------------------------------

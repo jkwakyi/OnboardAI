@@ -36,11 +36,12 @@ import {
   MAX_QUESTION_CHARACTERS,
   NetworkError,
   askQuestion,
+  sendToHr,
   type ChatAnswer,
   type Citation,
 } from '../api'
 import { Button, Card, CitationChip, EmptyState, FormField, StatusPill } from '../components'
-import { MessageSquare, SearchX } from '../components/icons'
+import { Inbox, MessageSquare, SearchX } from '../components/icons'
 import { useSession } from '../session/SessionContext'
 import './ChatPage.css'
 
@@ -50,12 +51,31 @@ export type Turn =
   | { state: 'answered'; id: string; question: string; answer: ChatAnswer }
   | { state: 'failed'; id: string; question: string; message: string; canRetry: boolean }
 
+/**
+ * Whether a fallback has been sent to HR, kept per chat log (ON-20).
+ *
+ * Keyed by the chat log's id rather than carried on the turn, because
+ * that id is what the escalation points at: the backend returns the
+ * existing escalation if the same one is sent twice, so the key here and
+ * the key there are the same thing.
+ */
+export type Escalated =
+  | { state: 'sending' }
+  | { state: 'sent' }
+  | { state: 'failed'; message: string }
+
 export const EMPTY_TITLE = 'Ask about anything in the HR documents'
 export const EMPTY_DESCRIPTION =
   'Answers come only from documents HR has approved and uploaded, and every answer shows which ones it used.'
 
 /** Shown on a turn the AI path declined to answer. */
 export const FALLBACK_LABEL = 'No answer found'
+
+/** The button, and what replaces it once the question is with HR. */
+export const SEND_TO_HR_LABEL = 'Send to HR'
+export const SENT_TO_HR_LABEL = 'Sent to HR'
+export const SENT_TO_HR_DETAIL =
+  'HR has your question and will reply to you here.'
 
 /**
  * What a question is labelled as while it is in flight.
@@ -100,6 +120,7 @@ export default function ChatPage() {
   const { api } = useSession()
   const [turns, setTurns] = useState<Turn[]>([])
   const [draft, setDraft] = useState('')
+  const [escalated, setEscalated] = useState<Record<number, Escalated>>({})
   const nextId = useRef(0)
   const latest = useRef<HTMLDivElement | null>(null)
 
@@ -151,6 +172,23 @@ export default function ChatPage() {
     void send(question, id)
   }, [question, ready, send])
 
+  const escalate = useCallback(
+    async (chatLogId: number): Promise<void> => {
+      setEscalated((current) => ({ ...current, [chatLogId]: { state: 'sending' } }))
+      try {
+        await sendToHr(api, chatLogId)
+        setEscalated((current) => ({ ...current, [chatLogId]: { state: 'sent' } }))
+      } catch (failure) {
+        if (!(failure instanceof ApiError || failure instanceof NetworkError)) throw failure
+        setEscalated((current) => ({
+          ...current,
+          [chatLogId]: { state: 'failed', message: failure.message },
+        }))
+      }
+    },
+    [api],
+  )
+
   const retry = useCallback(
     (turn: Turn) => {
       setTurns((current) =>
@@ -182,7 +220,12 @@ export default function ChatPage() {
             {turns.map((turn, index) => (
               <li className="chat__turn" key={turn.id}>
                 <div ref={index === turns.length - 1 ? latest : null}>
-                  <TurnView onRetry={() => retry(turn)} turn={turn} />
+                  <TurnView
+                    escalated={escalated}
+                    onEscalate={escalate}
+                    onRetry={() => retry(turn)}
+                    turn={turn}
+                  />
                 </div>
               </li>
             ))}
@@ -220,7 +263,17 @@ export default function ChatPage() {
   )
 }
 
-function TurnView({ onRetry, turn }: { onRetry: () => void; turn: Turn }) {
+function TurnView({
+  escalated,
+  onEscalate,
+  onRetry,
+  turn,
+}: {
+  escalated: Record<number, Escalated>
+  onEscalate: (chatLogId: number) => void
+  onRetry: () => void
+  turn: Turn
+}) {
   return (
     <Card accent="chat" className="chat__card" label="You asked">
       <p className="chat__question">{turn.question}</p>
@@ -234,7 +287,13 @@ function TurnView({ onRetry, turn }: { onRetry: () => void; turn: Turn }) {
         </p>
       )}
 
-      {turn.state === 'answered' && <AnswerView answer={turn.answer} />}
+      {turn.state === 'answered' && (
+        <AnswerView
+          answer={turn.answer}
+          escalated={escalated[turn.answer.id]}
+          onEscalate={() => onEscalate(turn.answer.id)}
+        />
+      )}
 
       {turn.state === 'failed' && (
         <div className="chat__failed">
@@ -255,7 +314,15 @@ function TurnView({ onRetry, turn }: { onRetry: () => void; turn: Turn }) {
   )
 }
 
-function AnswerView({ answer }: { answer: ChatAnswer }) {
+function AnswerView({
+  answer,
+  escalated,
+  onEscalate,
+}: {
+  answer: ChatAnswer
+  escalated?: Escalated
+  onEscalate: () => void
+}) {
   if (answer.fallback) {
     return (
       <div className="chat__answer">
@@ -269,6 +336,7 @@ function AnswerView({ answer }: { answer: ChatAnswer }) {
           </StatusPill>
         </p>
         <p className="chat__text">{answer.answer}</p>
+        <SendToHr escalated={escalated} onEscalate={onEscalate} />
       </div>
     )
   }
@@ -297,6 +365,52 @@ function AnswerView({ answer }: { answer: ChatAnswer }) {
             })}
           </ul>
         </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * The "Send to HR" button, and what it becomes (ON-20, E1).
+ *
+ * Only ever drawn on a fallback: the contracts say the button appears
+ * when an employee gets one, and sending an answered question would put
+ * a solved question in front of HR. The backend enforces that too — a
+ * button that is absent is not a rule — but this is where it is visible.
+ *
+ * Once sent, the button is replaced rather than disabled. A disabled
+ * button says "you cannot do this"; what is true is "this is done", and
+ * the two look identical while meaning opposite things.
+ */
+function SendToHr({ escalated, onEscalate }: { escalated?: Escalated; onEscalate: () => void }) {
+  if (escalated?.state === 'sent') {
+    return (
+      <p className="chat__sent">
+        {/* aria-live, because the change happens without the person
+            doing anything further and a silent one is a person pressing
+            the button again. */}
+        <span aria-live="polite" className="chat__sent-inner">
+          <Inbox aria-hidden="true" className="chat__pill-icon" />
+          <strong>{SENT_TO_HR_LABEL}.</strong> {SENT_TO_HR_DETAIL}
+        </span>
+      </p>
+    )
+  }
+
+  return (
+    <div className="chat__escalate">
+      <Button
+        loading={escalated?.state === 'sending'}
+        onClick={onEscalate}
+        size="sm"
+        variant="secondary"
+      >
+        {SEND_TO_HR_LABEL}
+      </Button>
+      {escalated?.state === 'failed' && (
+        <p className="chat__detail" role="alert">
+          {escalated.message}
+        </p>
       )}
     </div>
   )
