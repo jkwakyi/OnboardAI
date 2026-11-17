@@ -53,6 +53,7 @@ See [How to add an entry](#how-to-add-an-entry).
 | [TD-34](#td-34--the-question-length-limit-is-written-down-twice) | The question length limit is written down twice | Frontend | Open |
 | [TD-35](#td-35--one-escalation-per-question-is-a-convention-not-a-constraint) | One escalation per question is a convention, not a constraint | Storage | Open |
 | [TD-36](#td-36--a-cold-model-load-outlasts-the-gateways-timeout) | A cold model load outlasts the Gateway's timeout | AI Chatbot Module | Open |
+| [TD-37](#td-37--the-alpha-smoke-test-is-not-run-by-ci) | The alpha smoke test is not run by CI | Testing | Open |
 
 Status is **Open** (we intend to pay it back), **Accepted** (we have decided
 to live with it, and the entry says why), or **Mitigated** (paid back; kept
@@ -1291,3 +1292,39 @@ even though the employee cannot see it. For a demo, ask one throwaway
 question first — the model stays loaded for the next half hour. A startup
 warm-up belongs with ON-24, which has to run the whole question set
 through the real model anyway and will hit this on its first question.
+
+### TD-37 — The alpha smoke test is not run by CI
+
+**Taken:** 17 November 2026, in ON-26 · **Status:** Open · **Ticket:** none
+
+**What.** `scripts/alpha_smoke_test.py` runs the whole alpha path
+through HTTP against a real stack, and nothing runs it automatically. It
+is a command somebody types. CI runs the 1,287 unit and integration
+tests and none of the forty-eight checks in that script.
+
+**Why.** It needs four things CI does not have: PostgreSQL and ChromaDB
+with data in them, an OpenAI key with credit on it, and a 5 GB local
+model on a GPU. The first is reachable — the Integration job already
+starts both databases. The other two are not: the key is Jared's
+personal one and must not go into repository secrets for a student
+project, and no GitHub runner is going to hold qwen3 in VRAM. A version
+that ran against the mock providers would pass without proving the one
+thing the script exists to prove, which is that the *real* providers
+work together.
+
+**Impact.** Real but narrow. Everything the script checks that can be
+checked without a model is already covered by the suite — the Gateway's
+fallbacks, Auth Check, the upload refusals, the escalation rules. What
+only the script sees is the real embedding provider and the real model
+answering together, end to end, and that is exactly the part that breaks
+for environmental reasons rather than code reasons: an empty API
+account, an unloaded model, a changed endpoint. Those break silently
+between runs and nothing notices until somebody types the command.
+
+**Mitigation.** The script exits non-zero on any failure, so it is ready
+to be a CI job the day there is somewhere to run it. Until then it is
+run by hand before anything that matters — ON-27 for the alpha, ON-32
+for the code freeze — and its output is committed under `docs/alpha/`
+so the run that was actually made is on the record rather than
+remembered. A cheaper half-step would be a nightly job on Jared's
+machine; that is a scheduling problem, not a code one.

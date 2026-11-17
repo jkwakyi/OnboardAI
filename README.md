@@ -703,6 +703,37 @@ npm test
 npm run lint
 ```
 
+### The alpha smoke test
+
+The suite proves each module. This proves they work *together*, through
+HTTP, against the real embedding provider and the real local model — which
+no unit test does, because none of them can.
+
+```bash
+python scripts/alpha_smoke_test.py
+```
+
+Forty-eight checks across the whole alpha path: logging in, Auth Check
+turning away the tokens it should, the handbook uploaded and landing in
+both databases, a cited answer from the real model, an unanswerable
+question returning the HR fallback, the three ways the model can fail all
+producing that same fallback, the escalation reaching HR, and no key
+anywhere in the repository. It prints every check as a line, records the
+timings, and exits non-zero if anything failed.
+
+It **empties the knowledge base, the chat logs and the escalations**
+first, because "on a clean setup" is the point and a leftover knowledge
+base is how a smoke test passes against data it did not create. It
+refuses to run unless `ONBOARDAI_ENV=development`, and refuses to run
+against the Mock LLM, because a pass there would prove nothing. Pass
+`--no-reset` to re-measure without wiping.
+
+The last run is committed at
+[`docs/alpha/smoke-test-run-2026-11-17.txt`](docs/alpha/smoke-test-run-2026-11-17.txt).
+CI does not run it —
+[TD-37](TECHNICAL-DEBT.md#td-37--the-alpha-smoke-test-is-not-run-by-ci)
+says why.
+
 ## Continuous integration
 
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on every push and
