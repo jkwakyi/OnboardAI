@@ -46,6 +46,7 @@ See [How to add an entry](#how-to-add-an-entry).
 | [TD-27](#td-27--the-mock-embedder-is-lexical-not-semantic) | The Mock Embedder is lexical, not semantic | Backend | Open |
 | [TD-28](#td-28--vectors-are-written-outside-the-sql-transaction) | Vectors are written outside the SQL transaction | Backend | Open |
 | [TD-29](#td-29--an-existing-chromadb-collection-cannot-be-moved-to-cosine) | An existing ChromaDB collection cannot be moved to cosine | Storage | Accepted |
+| [TD-30](#td-30--the-relevance-threshold-is-tuned-against-the-wrong-embedding-model) | The relevance threshold is tuned against the wrong embedding model | AI Chatbot Module | Open |
 
 Status is **Open** (we intend to pay it back), **Accepted** (we have decided
 to live with it, and the entry says why), or **Mitigated** (paid back; kept
@@ -1008,3 +1009,52 @@ refuses an unknown space as well as a wrong one. Three tests cover it,
 including a collection that declines to say. If a reconciliation command
 ever gets written for TD-28, re-embedding into a fresh collection is the
 same work and would close this with it.
+
+### TD-30 — The relevance threshold is tuned against the wrong embedding model
+
+**Taken:** 17 November 2026, in ON-46 · **Status:** Open · **Ticket:** none
+
+**What.** `RELEVANCE_THRESHOLD` ships at **0.22**. That number was
+measured, not guessed: it is the value that best separated the evaluation
+question set's twenty answerable questions from its ten unanswerable ones,
+swept in 0.005 steps over the real stack. It was measured against the
+**mock** embedder, which is lexical rather than semantic (TD-27), so it is
+a threshold for a scoring distribution the shipped system will not have.
+
+The measurement also says something worse than "this is the wrong model":
+the two distributions **overlap**. Answerable questions scored between
+0.234 and 0.503, median 0.408. Unanswerable ones scored between 0.080 and
+0.417, median 0.273 — so the best unanswerable question outscores the
+median answerable one. No threshold separates them. The best available
+value gets 24 of 30 right; at 0.22 it refuses none of the twenty
+answerable questions and still lets six of the ten unanswerable ones
+through to the model.
+
+**Why.** The Embedding API account has no credit, so the hosted model has
+never returned a vector and its score distribution has never been seen.
+The alternative was to ship a guessed number that looked authoritative, or
+to ship nothing and leave the QA Controller unable to make the decision
+the contracts give it. A measured number against the only provider that
+runs, clearly labelled as such, is the honest version of a provisional
+threshold — which is what ON-46 asked for.
+
+**Impact.** Two different risks depending on who runs it. On the mock —
+CI, teammates without a key, the alpha demo if it runs that way — six in
+ten questions the handbook does not answer reach the model. On the hosted
+model, the number is simply unvalidated: a semantic embedder should
+separate these cases better than a lexical one, so 0.22 is more likely to
+be too permissive than too strict, but that is reasoning rather than
+measurement.
+
+**Mitigation.** The threshold is not the only defence, and that matters
+more than the number. The LLM Gateway drops any citation naming a section
+the model was not given and treats an answer with no surviving citation as
+a fallback, so a question that clears the threshold still cannot produce
+an answer unanchored to an approved document. That second check does not
+engage under the Mock LLM, which cites whatever it is handed, so the six
+above are a measurement of the first defence alone.
+
+Paying it back is one command once there is credit: the sweep is a
+scratch script that uploads the handbook, runs all thirty evaluation
+questions and prints the separation table, and it belongs in the
+evaluation story (ON-23 / ON-24) along with the tuning itself.
