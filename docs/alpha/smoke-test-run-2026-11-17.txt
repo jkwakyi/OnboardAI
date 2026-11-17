@@ -1,0 +1,98 @@
+OnboardAI alpha smoke test
+API: http://127.0.0.1:8000/api
+LLM_PROVIDER=real  model=qwen3:8b
+EMBEDDING_PROVIDER=openai  model=text-embedding-3-small
+
+0. A clean setup
+----------------
+  knowledge base, chat logs and escalations cleared
+
+1. Authentication (step 1, ON-13)
+---------------------------------
+  [PASS] an invalid password is refused with 401 - got 401
+  [PASS] the refusal does not say whether the account exists - The email address or password is incorrect.
+  [PASS] an unknown account is refused with 401 - got 401
+  [PASS] the HR administrator can log in and the token carries their role - 200, role=hr_administrator
+  [PASS] the employee can log in and the token carries their role - 200, role=employee
+
+2. Auth Check rejects what it should (step 2, ON-14)
+----------------------------------------------------
+  [PASS] no token at all is refused with 401 - got 401
+  [PASS] a malformed token is refused with 401 - got 401
+  [PASS] a tampered token is refused with 401 - got 401
+  [PASS] an employee cannot upload a document (HR only) - got 403
+
+3. The HR administrator uploads the handbook (U1-U4, ON-15)
+-----------------------------------------------------------
+  [PASS] the handbook is present (8 chapters)
+  [PASS] all 8 chapters uploaded and were read on the way in - 8 of 8, slowest 0.7s
+  [PASS] every upload finished inside 10s - slowest 0.7s
+  [PASS] an unsupported file type is refused rather than stored - got 415
+  [PASS] a document with no readable text is refused - got 422
+  [PASS] 8 documents and their sections are in PostgreSQL - 8 documents, 62 sections
+  [PASS] every section has a vector in ChromaDB - 62 vectors for 62 sections
+
+4. An employee asks (steps 1-9, ON-17, ON-18)
+---------------------------------------------
+         first question took 1.7s
+  [PASS] an answerable question is answered rather than refused - 200, fallback=False
+  [PASS] the answer carries at least one citation - 1 citation(s)
+  [PASS] the citation names the chapter that answers the question - 04-time-off-and-leave.pdf / 4.1 PAID TIME OFF
+  [PASS] the answer is not the Mock LLM's - Regular full-time employees accrue PTO according to length of service:
+         answer: Regular full-time employees accrue PTO according to length of service: 15 days per year for years 1 and 2, 20 days per year for years 3 to 5, and 25 d
+  [PASS] the answer came back inside the Gateway's 20s - 2.0s
+  [PASS] ...and, with the model loaded, inside the 12s target - 2.0s
+  [PASS] even a cold first question stays inside the contractual limit - 1.7s - if this fails it is TD-36, not a regression
+  [PASS] an unanswerable question returns the HR fallback, not an error - 200, fallback=True
+  [PASS] the fallback points the employee at HR - I could not find an answer to that in the approved HR documents. Pleas
+  [PASS] the fallback cites nothing, because nothing was used - 0 citation(s)
+  [PASS] the model was never asked, so the refusal is fast - 0.4s
+  [PASS] an empty question is refused with 422 - got 422
+  [PASS] an oversized question is refused with 422 - got 422
+
+5. The model failing produces the HR fallback (ON-45, ON-18)
+------------------------------------------------------------
+returning the HR fallback: the local model 'a-model-nobody-pulled:70b' is not available from http://127.0.0.1:11434/api/generate: model 'a-model-nobody-pulled:70b' not found
+  [PASS] a model that is not there falls back rather than erroring - the local model 'a-model-nobody-pulled:70b' is not available from http
+returning the HR fallback: could not reach the local model at http://127.0.0.1:1/api/generate: [WinError 10061] No connection could be made because the target machine actively refused it
+  [PASS] a model server that is down falls back rather than erroring - could not reach the local model at http://127.0.0.1:1/api/generate: [W
+returning the HR fallback: the provider did not answer within 0.05 seconds
+  [PASS] a model that does not answer in time falls back - the provider did not answer within 0.05 seconds
+  [PASS] ...and the employee stops waiting when the limit says so - waited 0.06s
+
+6. The employee sends the question to HR (E1-E2, ON-20)
+-------------------------------------------------------
+  [PASS] the fallback can be sent to HR - got 201
+  [PASS] HR receives the question as the employee asked it - What is the capital of Mongolia?
+  [PASS] it arrives open, waiting for a reply
+  [PASS] sending it twice does not put it in the inbox twice - ids 6 and 6
+  [PASS] an answer that is not yours cannot be escalated - got 404
+
+7. Keys are not in the repository
+---------------------------------
+  [PASS] no .env file is tracked by git
+  [PASS] .env.example is tracked, so the shape is documented
+  [PASS] the live EMBEDDING_API_KEY appears in no tracked file
+  [PASS] the live AUTH_SECRET_KEY appears in no tracked file
+  [PASS] the frontend reads no VITE_ variable that could hold a secret - VITE_API_BASE_URL
+
+8. The endpoints the alpha does not have
+----------------------------------------
+  [PASS] GET /api/documents is absent, as expected (ON-16) - got 405
+  [PASS] DELETE /api/documents/1 is absent, as expected (ON-16) - got 404
+  [PASS] POST /api/chat/feedback is absent, as expected (ON-19) - got 404
+  [PASS] GET /api/escalations is absent, as expected (ON-21) - got 405
+  [PASS] PATCH /api/escalations/1 is absent, as expected (ON-21) - got 404
+
+Timings
+-------
+  login              n=2   median  0.41s  slowest  0.41s
+  upload             n=8   median  0.62s  slowest  0.73s
+  ask (first, possibly cold) n=1   median  1.71s  slowest  1.71s
+  ask (answered)     n=1   median  2.00s  slowest  2.00s
+  ask (fallback)     n=1   median  0.38s  slowest  0.38s
+  escalate           n=1   median  0.02s  slowest  0.02s
+
+Result
+------
+  48 of 48 checks passed
