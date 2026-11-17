@@ -122,21 +122,27 @@ See `CONTRIBUTING.md` for the full version. In short:
 
 ## Tickets that need Jared
 
-- **ON-10 — Embedding API provider and key.** *Decided 11 November 2026:*
-  hosted, OpenAI `text-embedding-3-small`, 1536 dimensions. Jared puts the
-  key in his own local `.env`. **Never ask him to paste a key into chat.**
-  Changing provider or model is his call, not a refactor.
-- **ON-18 — real local LLM.** Ask which models he has downloaded and what
-  hardware he has, agree the selection criteria with him, then select. Keep
-  the Mock LLM selectable by configuration so CI and teammates without the
-  model can still run the system. *Known 11 November 2026:* Ollama **0.40.16**
-  on an RTX 5070 with **12 GB VRAM**, 64 GB RAM, i7-10700F. Eight models,
-  38 GB: `deepseek-r1:14b`, `gemma4:12b`, `qwen2.5vl:7b`, `minicpm-v:8b`,
-  `qwen3:8b`, `mistral:7b`, `llama3.2:latest`, `nomic-embed-text:latest`.
-  Verified working: `qwen3:8b` loads fully into VRAM and returns valid JSON
-  with citations under `"format":"json"`, which is what the LLM Gateway
-  needs. Avoid `deepseek-r1:14b` — a reasoning model whose thinking traces
-  fight strict JSON validation.
+- **ON-10 — Embedding API provider and key. Done 17 November 2026.**
+  Hosted, OpenAI `text-embedding-3-small`, 1536 dimensions; credit added
+  and verified with `python scripts/check_embedding_api.py`. Jared keeps
+  the key in his own local `.env`. **Never ask him to paste a key into
+  chat.** Changing provider or model is his call, not a refactor. If the
+  account runs dry again the symptom is every question returning the HR
+  fallback with a 429 in the backend log, not an error on the page.
+- **ON-18 — real local LLM. Settled 17 November 2026; nothing to ask.**
+  `qwen3:8b` was selected against the ticket's criteria over `mistral:7b`
+  (4 of 5, miscited once) and `llama3.2:latest` (1 of 5 — it cites the
+  handbook's own numbering rather than the section id the prompt gave it).
+  Reasoning is turned **off** in the request: with it on the same answer
+  cost 380 tokens and 18.6 seconds instead of 87 and 4.0, which is most of
+  the Gateway's 20-second budget spent on text the JSON check discards.
+  Avoid `deepseek-r1:14b` for the same reason, with no way to turn it off.
+  The Mock LLM stays the default so CI and teammates without the model can
+  run the system. Changing the model is Jared's call; the measurements to
+  change it against are in the README.
+
+  *Hardware, 11 November 2026:* Ollama **0.40.16** on an RTX 5070 with
+  **12 GB VRAM**, 64 GB RAM, i7-10700F. Eight models, 38 GB.
 
   Ollama is served by an NSSM service belonging to SentinelMesh. **It is off
   limits** — see [SentinelMesh is off limits](#sentinelmesh-is-off-limits-standing-rule).
