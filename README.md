@@ -430,6 +430,45 @@ command to delete it; delete it and re-upload the documents. Why there is
 no automatic migration is
 [TD-29](TECHNICAL-DEBT.md#td-29--an-existing-chromadb-collection-cannot-be-moved-to-cosine).
 
+### When the assistant declines to answer
+
+The QA Controller (`backend/app/services/qa/`) runs the ask flow and makes
+the one decision the contracts give it: **if the best retrieved section
+scores below the relevance threshold, the LLM is not asked at all.**
+
+Not asked, rather than asked and overruled. A model handed five
+irrelevant sections and a direct question will usually answer it anyway,
+from what it learnt in training rather than from an approved HR document,
+and that answer reads exactly like a good one. Skipping the call is the
+only thing standing in its way, so the test that matters is not that a
+fallback came back — it is that the provider was never called. The live
+check counts those calls and requires zero.
+
+Whatever way the AI path declines — below the threshold, nothing
+retrieved, the Embedding API down, the model timing out, output that
+fails the JSON check — the employee sees the same message directing them
+to HR. The reason is recorded for the log and never rendered: the
+difference between "the model timed out" and "the handbook does not cover
+this" is not something an employee can act on, and either way the next
+step is to ask HR.
+
+**The threshold is provisional, and the number is measured.**
+`RELEVANCE_THRESHOLD` ships at 0.22 — the value that best separated the
+[evaluation question set](#the-evaluation-question-set)'s twenty
+answerable questions from its ten unanswerable ones, swept over the real
+stack.
+
+It was measured against the **mock embedder**, because the Embedding API
+account has no credit, and the two score distributions overlap: the best
+unanswerable question outscores the median answerable one, so no
+threshold separates them cleanly. At 0.22 it refuses none of the twenty
+answerable questions and lets six of the ten unanswerable ones through.
+What catches the rest is the LLM Gateway dropping an answer that cites
+nothing it was given — a second defence that does not engage under the
+Mock LLM, which cites whatever it is handed. All of this is
+[TD-30](TECHNICAL-DEBT.md#td-30--the-relevance-threshold-is-tuned-against-the-wrong-embedding-model),
+and tuning it properly belongs to the evaluation story.
+
 ### Which language model answers
 
 Nothing downloads a model and nothing needs a key:
@@ -588,6 +627,7 @@ backend/
       embedding/  the Embedding Client, the hosted API and the mock
       llm/        the LLMProvider interface and the Mock LLM
       retrieval/  the Retrieval Service: question in, top 5 sections out
+      qa/         the QA Controller: the relevance threshold and the fallback
     vectorstore/  Vector Database (ChromaDB) client
     config.py     settings, read from the environment
     main.py       application factory

@@ -61,6 +61,32 @@ class Settings(BaseSettings):
     # model running; see the LLMProvider interface (ON-44) and ON-18.
     llm_provider: str = "mock"
 
+    # How good the best retrieved section has to be before the QA
+    # Controller will ask the LLM anything at all (ON-46). Below this, the
+    # contracts say to skip the LLM and return the HR fallback.
+    #
+    # A setting rather than a constant, unlike the top-5 cut and the
+    # Gateway's 20 seconds: ON-46 says to start with a provisional value
+    # and tune it in the evaluation story, and the right value depends on
+    # the embedding model rather than on the design.
+    #
+    # The score is a cosine similarity, so it runs from 1.0 (the section
+    # says the same thing as the question) down through 0.0 (nothing in
+    # common) to -1.0.
+    #
+    # 0.22 is measured, not guessed: it is the value that best separated
+    # the evaluation question set's twenty answerable questions from its
+    # ten unanswerable ones, over the real stack. It lets every answerable
+    # question through. It also lets six of the ten unanswerable ones
+    # through, because the two score distributions overlap - the best
+    # unanswerable question outscores the median answerable one - so a
+    # threshold alone cannot do this job. What catches the rest is the LLM
+    # Gateway dropping an answer that cites nothing it was given. All of
+    # this was measured against the *mock* embedder, which is lexical;
+    # the hosted model's distribution has never been seen, because the
+    # account has no credit. See TD-30.
+    relevance_threshold: float = 0.22
+
     # Which origins the browser may call this API from (ON-38).
     #
     # Comma-separated, because a .env file holding JSON is a .env file
@@ -153,6 +179,21 @@ class Settings(BaseSettings):
         """A batch of nothing would send no sections and report success."""
         if value < 1:
             raise ValueError("EMBEDDING_BATCH_SIZE must be at least 1")
+        return value
+
+    @field_validator("relevance_threshold")
+    @classmethod
+    def _relevance_threshold_must_be_reachable(cls, value: float) -> float:
+        """A cosine similarity cannot leave [-1, 1], so a threshold outside
+        it is a typo rather than a strict policy - and the symptom of one
+        above 1.0 is every employee getting the HR fallback forever, with
+        nothing anywhere saying why.
+        """
+        if not -1.0 <= value <= 1.0:
+            raise ValueError(
+                f"RELEVANCE_THRESHOLD is {value}, which no cosine similarity can "
+                f"reach; it must be between -1.0 and 1.0"
+            )
         return value
 
     @property
