@@ -395,6 +395,41 @@ does and does not cover is
 the fact that a token cannot be withdrawn once issued is
 [TD-19](TECHNICAL-DEBT.md#td-19--a-login-token-cannot-be-withdrawn-once-issued).
 
+### Finding the sections that answer a question
+
+The Retrieval Service (`backend/app/services/retrieval/`) does steps 5 and
+6: the question is embedded by the same client and the same model that
+embedded the documents, the Vector Database is asked for the five closest
+sections, and the text comes back out of the Main Database.
+
+Two lookups, not one, because the Vector Database holds vectors and ids
+and deliberately not the text — PostgreSQL keeps the one approved copy of
+every section, so there is nothing for the two stores to disagree about.
+That makes the join this component's real work: `WHERE id IN (...)` returns
+rows in whatever order the planner likes, so the rows are put back into the
+order ChromaDB ranked them before anything sees them. A ranking lost here
+produces no error at all — five genuinely close sections, ordered by
+accident, and a confident answer built out of them.
+
+Each result carries a **score**: `1.0` for a section pointing exactly where
+the question does, falling as the angle opens, and below zero for one
+pointing the other way. It is not clamped, because "useless" and "actively
+wrong" are different things and ON-46's relevance threshold is the thing
+that needs to tell them apart. Retrieval itself applies no threshold and
+decides nothing: it returns what it found, with the number to judge it by.
+
+**The collection has to be in cosine space.** That score is `1 - distance`,
+which is true for cosine and false for ChromaDB's default of `l2`. The two
+rank unit vectors identically, so a collection in the wrong space returns
+the right five sections with wrong scores and nothing to show for it. The
+collection is therefore created as cosine and **checked** on every use —
+asking is not the same as getting, because `get_or_create_collection`
+silently ignores the metadata for a collection that already exists. A
+collection made before ON-43 is refused with a message naming it and the
+command to delete it; delete it and re-upload the documents. Why there is
+no automatic migration is
+[TD-29](TECHNICAL-DEBT.md#td-29--an-existing-chromadb-collection-cannot-be-moved-to-cosine).
+
 ### Which language model answers
 
 Nothing downloads a model and nothing needs a key:
@@ -552,6 +587,7 @@ backend/
       documents/  File Storage, text extraction, sections
       embedding/  the Embedding Client, the hosted API and the mock
       llm/        the LLMProvider interface and the Mock LLM
+      retrieval/  the Retrieval Service: question in, top 5 sections out
     vectorstore/  Vector Database (ChromaDB) client
     config.py     settings, read from the environment
     main.py       application factory
