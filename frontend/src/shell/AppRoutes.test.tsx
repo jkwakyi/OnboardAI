@@ -119,9 +119,13 @@ describe('pages that do not exist yet', () => {
     // More use to a teammate than "coming soon", and it is why every route
     // the epic names is routed from the start rather than added one at a
     // time as the pages land.
-    renderApp({ path: '/chat', token: EMPLOYEE_TOKEN })
+    //
+    // The HR Inbox, since ON-48 built the chat page. When ON-21 lands
+    // there will be no route left without a page and this test goes with
+    // it - which is the right ending for it.
+    renderApp({ path: '/inbox', token: HR_TOKEN })
 
-    expect(screen.getByText(/built in ON-48/)).toBeInTheDocument()
+    expect(screen.getByText(/built in ON-21/)).toBeInTheDocument()
   })
 })
 

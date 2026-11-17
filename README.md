@@ -395,6 +395,31 @@ does and does not cover is
 the fact that a token cannot be withdrawn once issued is
 [TD-19](TECHNICAL-DEBT.md#td-19--a-login-token-cannot-be-withdrawn-once-issued).
 
+### Asking a question from the interface
+
+Sign in as either role and open **Chat**. Type a question, press Enter
+(Shift+Enter for a new line) and the turn appears in the transcript while
+it waits — the LLM Gateway allows the model twenty seconds, so the wait is
+part of the page rather than a spinner on a button.
+
+An answer shows the text and, under **Drawn from**, a chip per section it
+used: the document and the heading, taken from the retrieved section
+rather than from the model, so a citation cannot be mislabelled even when
+its id is right. The chips are not pressable — opening a section needs an
+endpoint that reads one, and the contracts define no such endpoint.
+
+**A fallback is drawn as a normal turn, not as an error.** It gets a
+quiet "No answer found" pill and the message directing the employee to
+HR. That is deliberate and it is the page's most important behaviour: the
+assistant declining to invent a policy is it working, and an employee
+shown that in red learns the opposite. Red is kept for the things that
+really failed — the network, a refused question, a server that broke —
+and those get an alert and, where trying again could work, a retry.
+
+**The transcript is this visit only.** Every chat is saved server-side
+(ON-47), but none of the nine endpoints reads chat history back, so a
+reload starts an empty page. Nothing on the page pretends otherwise.
+
 ### Finding the sections that answer a question
 
 The Retrieval Service (`backend/app/services/retrieval/`) does steps 5 and
