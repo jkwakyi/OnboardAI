@@ -47,6 +47,8 @@ See [How to add an entry](#how-to-add-an-entry).
 | [TD-28](#td-28--vectors-are-written-outside-the-sql-transaction) | Vectors are written outside the SQL transaction | Backend | Open |
 | [TD-29](#td-29--an-existing-chromadb-collection-cannot-be-moved-to-cosine) | An existing ChromaDB collection cannot be moved to cosine | Storage | Accepted |
 | [TD-30](#td-30--the-relevance-threshold-is-tuned-against-the-wrong-embedding-model) | The relevance threshold is tuned against the wrong embedding model | AI Chatbot Module | Open |
+| [TD-31](#td-31--a-chat-log-does-not-record-why-it-fell-back) | A chat log does not record why it fell back | Backend API | Open |
+| [TD-32](#td-32--the-most-expensive-endpoint-has-no-rate-limit) | The most expensive endpoint has no rate limit | Backend API | Open |
 
 Status is **Open** (we intend to pay it back), **Accepted** (we have decided
 to live with it, and the entry says why), or **Mitigated** (paid back; kept
@@ -1058,3 +1060,80 @@ Paying it back is one command once there is credit: the sweep is a
 scratch script that uploads the handbook, runs all thirty evaluation
 questions and prints the separation table, and it belongs in the
 evaluation story (ON-23 / ON-24) along with the tuning itself.
+
+### TD-31 — A chat log does not record why it fell back
+
+**Taken:** 17 November 2026, in ON-47 · **Status:** Open · **Ticket:** none
+
+**What.** `chat_logs` records that an answer was a fallback, and not
+which of the five ways it became one: below the relevance threshold,
+nothing retrieved, the Embedding API or Vector Database failing, the
+model timing out, the provider erroring, or output that failed the JSON
+check. The QA Controller produces that reason, and the best score with
+it; the Chat API writes neither.
+
+**Why.** The table's columns come from ON-11, which took them from the
+Interface Contracts' data table — "the question, the answer, the
+citations, whether it was a fallback". Adding `reason` and `best_score`
+means a migration and two columns the contracts do not name, and
+CLAUDE.md is explicit that the contracts are the source of truth and that
+inventing fields is not a decision this build gets to make on its own.
+Both are in the application log already, so nothing is lost permanently —
+only the ability to query it.
+
+**Impact.** ON-24 measures the fallback rate, and the number it can
+produce from this table is a single total. "One in five questions is
+unanswered" reads as a content problem and sends somebody off to write
+more handbook. If most of those were really the Embedding API timing out,
+that is an operations problem and the handbook was never the issue. The
+two are indistinguishable in the table, and only the second one is
+urgent.
+
+Worth saying plainly: this matters more than it looks, because TD-30
+already means the threshold is the least trustworthy part of the system.
+The one measurement that would show it misbehaving is the one this table
+cannot produce.
+
+**Mitigation.** Every reason is in the application log, with the score,
+so an answer to "why did these fall back" exists today — it is a grep
+rather than a query, and it is bounded by how long the logs are kept,
+which is nothing in particular. Adding the two columns is a small
+migration plus one line in the Chat API; the part that needs a decision
+is whether the contracts' data table can gain a field, which is Jared's
+call and not a refactor.
+
+### TD-32 — The most expensive endpoint has no rate limit
+
+**Taken:** 17 November 2026, in ON-47 · **Status:** Open · **Ticket:** none
+
+**What.** `POST /api/auth/login` is throttled, because ON-37 asked for it.
+`POST /api/chat/ask` is not, and it is by far the more expensive of the
+two: every call embeds a question through a paid API, queries ChromaDB,
+and may hold a connection open for the LLM Gateway's full twenty seconds.
+Any signed-in employee can make them as fast as their browser allows.
+
+**Why.** ON-47 does not ask for one, the contracts do not describe one,
+and the throttle that exists was built for a different shape of problem —
+`login_max_attempts` counts failures per address, where this would need to
+count successes per user. Reusing it would have meant changing a component
+the login tests depend on, in a ticket about a different endpoint.
+
+**Impact.** Three things, in rising order of how much they would annoy
+somebody. Every uvicorn worker is single-threaded for the duration of a
+model call, so a handful of concurrent questions is enough to make the
+assistant feel broken for everyone else. The Embedding API is billed per
+request. And a loop in a browser console is a bill and a denial of
+service at the same time, from an ordinary employee account, with nothing
+in the way.
+
+For the alpha this is bounded by the audience: two teammates and a
+marker, on one machine, with the Mock LLM. It stops being bounded the
+moment the system is deployed anywhere with real accounts.
+
+**Mitigation.** None in place. The ingredients exist — `app/api/throttle.py`
+already does fixed-window counting and returns a `429` with `Retry-After`
+— so the work is a per-user key and a row in the settings, maybe thirty
+lines. The same ticket should decide whether the limit is per user or per
+worker, because TD-20 already records that the login throttle is in
+process and therefore per worker, and a second throttle with the same
+property should say so once rather than twice.
