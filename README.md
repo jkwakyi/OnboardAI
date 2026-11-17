@@ -430,6 +430,45 @@ command to delete it; delete it and re-upload the documents. Why there is
 no automatic migration is
 [TD-29](TECHNICAL-DEBT.md#td-29--an-existing-chromadb-collection-cannot-be-moved-to-cosine).
 
+### Asking a question
+
+`POST /api/chat/ask` is the whole ask flow, steps 1 to 9. The question
+goes in, the answer with its citations comes out, and the chat is saved
+before the response is sent.
+
+```json
+{ "question": "How many days of paid time off do I accrue in my fourth year?" }
+```
+
+```json
+{
+  "id": 5,
+  "answer": "...",
+  "citations": [
+    { "section_id": 475, "heading": "4.1 PAID TIME OFF", "document": "04-time-off-and-leave.txt" }
+  ],
+  "fallback": false
+}
+```
+
+`id` is the saved chat log. The Chat Page needs it to rate an answer and
+to click "Send to HR" on a fallback so HR's reply comes back against the
+right message (E4), so it is always a row that exists — which is why a
+database failure here is a `500` rather than a fallback carrying an id
+that points at nothing.
+
+**The AI path never produces an error status.** No good match, nothing
+retrieved, the Embedding API down, the model timing out, output that
+fails the JSON check: all of them are `200` with `fallback: true` and the
+same message directing the employee to HR. What is still an error is a
+question that is blank or longer than the Gateway will read (`422`), a
+token that is missing or invalid (`401`), and the Main Database refusing
+to record the chat (`500`).
+
+The heading and document on a citation come from the retrieved section
+rather than from the model, so a citation cannot be mislabelled even when
+its id is right.
+
 ### When the assistant declines to answer
 
 The QA Controller (`backend/app/services/qa/`) runs the ask flow and makes
@@ -468,6 +507,24 @@ nothing it was given — a second defence that does not engage under the
 Mock LLM, which cites whatever it is handed. All of this is
 [TD-30](TECHNICAL-DEBT.md#td-30--the-relevance-threshold-is-tuned-against-the-wrong-embedding-model),
 and tuning it properly belongs to the evaluation story.
+
+**What that looks like from the outside.** Asked over HTTP against the
+whole handbook, with the mock embedder:
+
+| Question | Answered? |
+| --- | --- |
+| How many days of paid time off do I accrue in my fourth year? | yes |
+| How much holiday do I get? | no — fallback |
+| What is my annual leave entitlement? | no — fallback |
+| What is the airspeed velocity of an unladen swallow? | **yes** |
+
+The handbook says "paid time off". The mock matches words rather than
+meaning, so the two real questions that avoid its vocabulary are refused,
+and the nonsense one — which is mostly ordinary English words that appear
+throughout the handbook — scores 0.333 and sails past a threshold tuned
+on real questions. **Judge nothing about answer quality from a run on the
+mock.** It exists so the system can be run without a key, not so it can
+be assessed.
 
 ### Which language model answers
 
@@ -628,6 +685,7 @@ backend/
       llm/        the LLMProvider interface and the Mock LLM
       retrieval/  the Retrieval Service: question in, top 5 sections out
       qa/         the QA Controller: the relevance threshold and the fallback
+      logs/       the Logging Service: saved chats
     vectorstore/  Vector Database (ChromaDB) client
     config.py     settings, read from the environment
     main.py       application factory
