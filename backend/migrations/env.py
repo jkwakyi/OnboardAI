@@ -21,7 +21,19 @@ from app.db.session import Base
 config = context.config
 
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    # `disable_existing_loggers=False`, which is not the default. Alembic
+    # is not always a command line: the migration tests call
+    # `command.upgrade` inside the test process, and the default would
+    # switch off every logger that already existed - which is every logger
+    # in the application - for the rest of that process.
+    #
+    # Nothing announces that. The application keeps running and simply
+    # stops saying anything, so a later test asserting "this warns" sees
+    # an empty log and a later test asserting "this does not warn" passes
+    # without the code being run at all. The second is the dangerous one,
+    # and it is how this was found: the first test to assert on a log
+    # after the migration tests was the one that failed.
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 # A caller may set the URL itself - the tests run this migration against
 # a throwaway SQLite file. Only fall back to the application settings.
