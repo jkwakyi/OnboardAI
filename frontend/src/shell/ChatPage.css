@@ -1,0 +1,119 @@
+/*
+ * The Chat Page (ON-48).
+ *
+ * Tokens only - every value here is a variable from ON-63. A page that
+ * names its own colours or spacings is a page the theme cannot reach.
+ */
+
+.chat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.chat__transcript {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* A list, because it is one: an ordered sequence of exchanges. The
+   markers are off because the numbering is not something to read out. */
+.chat__turns {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chat__question {
+  margin-bottom: var(--space-3);
+  color: var(--text);
+  font-size: var(--text-sm);
+  /* A pasted question can carry its own line breaks, and losing them
+     turns a list of three things into one run-on sentence. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.chat__waiting {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.chat__answer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  /* Separated from the question above it, so the two halves of a turn
+     read as question and answer rather than as one block of text. */
+  padding-top: var(--space-3);
+  border-top: var(--border-width) solid var(--border);
+}
+
+.chat__outcome {
+  display: flex;
+}
+
+.chat__pill-icon {
+  width: var(--icon-size-sm);
+  height: var(--icon-size-sm);
+  margin-right: var(--space-1);
+}
+
+.chat__text {
+  color: var(--text);
+  font-size: var(--text-sm);
+  line-height: var(--line-height-body);
+  /* The model's own paragraphs. Collapsing them makes a three-step
+     answer into one unreadable paragraph. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.chat__citations {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* The same treatment as a card's section label, from the same tokens, so
+   "Drawn from" and a card label are visibly the same kind of thing. */
+.chat__citations-label {
+  color: var(--label-color);
+  font-size: var(--label-size);
+  font-weight: var(--label-weight);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+}
+
+.chat__citation-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chat__failed {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: var(--border-width) solid var(--border);
+}
+
+.chat__detail {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.chat__actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--space-3);
+}
