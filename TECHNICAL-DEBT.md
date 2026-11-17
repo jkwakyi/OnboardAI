@@ -33,7 +33,7 @@ See [How to add an entry](#how-to-add-an-entry).
 | [TD-14](#td-14--the-token-gallery-is-kept-out-of-the-build-by-convention) | The token gallery is kept out of the build by convention | Frontend | Mitigated |
 | [TD-15](#td-15--the-pipeline-has-no-deployment-stage) | The pipeline has no deployment stage | Build | Accepted |
 | [TD-16](#td-16--every-components-css-ships-used-or-not) | Every component's CSS ships, used or not | Frontend | Accepted |
-| [TD-17](#td-17--citationchip-is-a-button-that-does-nothing-yet) | CitationChip is a button that does nothing yet | Frontend | Accepted |
+| [TD-17](#td-17--citationchip-is-a-button-that-does-nothing-yet) | CitationChip is a button that does nothing yet | Frontend | Mitigated |
 | [TD-18](#td-18--the-session-is-a-development-stub-and-a-refresh-signs-you-out) | The session is a development stub and a refresh signs you out | Frontend | Mitigated |
 | [TD-19](#td-19--a-login-token-cannot-be-withdrawn-once-issued) | A login token cannot be withdrawn once issued | Backend API | Accepted |
 | [TD-20](#td-20--nothing-limits-failed-login-attempts) | Nothing limits failed login attempts | Backend API | Mitigated |
@@ -49,6 +49,8 @@ See [How to add an entry](#how-to-add-an-entry).
 | [TD-30](#td-30--the-relevance-threshold-is-tuned-against-the-wrong-embedding-model) | The relevance threshold is tuned against the wrong embedding model | AI Chatbot Module | Open |
 | [TD-31](#td-31--a-chat-log-does-not-record-why-it-fell-back) | A chat log does not record why it fell back | Backend API | Open |
 | [TD-32](#td-32--the-most-expensive-endpoint-has-no-rate-limit) | The most expensive endpoint has no rate limit | Backend API | Open |
+| [TD-33](#td-33--a-refresh-loses-the-conversation) | A refresh loses the conversation | Frontend | Open |
+| [TD-34](#td-34--the-question-length-limit-is-written-down-twice) | The question length limit is written down twice | Frontend | Open |
 
 Status is **Open** (we intend to pay it back), **Accepted** (we have decided
 to live with it, and the entry says why), or **Mitigated** (paid back; kept
@@ -509,7 +511,18 @@ matters.
 
 ### TD-17 — CitationChip is a button that does nothing yet
 
-**Taken:** 12 November 2026, in ON-64 · **Status:** Accepted · **Ticket:** ON-48
+**Taken:** 12 November 2026, in ON-64 · **Status:** Mitigated · **Ticket:** ON-48
+
+**Closed 17 November 2026, in ON-48 — but not as predicted.** The
+mitigation below assumed the chat page would supply the handler. It
+cannot: opening a section needs an endpoint that reads one, and the
+Interface Contracts define exactly nine endpoints, none of which does.
+So the chat page renders each chip `disabled` instead. That removes the
+harm this entry actually describes — a disabled button is not a focus
+stop, so there is no longer a keystroke that leads nowhere — and keeps
+the chip a button for whenever a tenth endpoint is agreed. Turning it
+into plain text, the other option offered below, would have thrown away
+the affordance for the same result.
 
 **What.** ON-64 asks for the citation chip to be focusable. It is rendered
 as a `<button>` with an optional `onClick`, and until the chat page wires
@@ -1137,3 +1150,68 @@ lines. The same ticket should decide whether the limit is per user or per
 worker, because TD-20 already records that the login throttle is in
 process and therefore per worker, and a second throttle with the same
 property should say so once rather than twice.
+
+### TD-33 — A refresh loses the conversation
+
+**Taken:** 17 November 2026, in ON-48 · **Status:** Open · **Ticket:** none
+
+**What.** The chat transcript lives in the Chat Page's own state. Every
+chat is saved server-side the moment it is answered (ON-47, step 9), but
+reloading the page, following a link and coming back, or opening the app
+on a second device all start from an empty transcript. The answers still
+exist in `chat_logs`; nothing can read them back.
+
+**Why.** The Interface Contracts define exactly nine endpoints and none
+of them lists chat history. CLAUDE.md is explicit that inventing an
+endpoint is not a decision this build makes on its own, so the choice
+was between a tenth endpoint nobody agreed and a page that is honest
+about starting empty. The page is honest about it, including in the
+README.
+
+**Impact.** An employee who refreshes, or who clicks a link in an answer
+and comes back, loses what they asked and what they were told. They can
+ask again — questions are cheap and the answer is deterministic for the
+same documents — but the fallback case is worse: a fallback is the one
+answer with a next step attached ("Send to HR"), and losing it before
+that step is taken loses the only trace the person had of the question
+they could not get answered.
+
+**Mitigation.** Nothing on the page. Two routes out, and the first is
+not obviously worse: keep the transcript in `sessionStorage`, which
+survives a refresh, is already where the login token lives, and needs no
+endpoint — bounded by it being per-tab and per-device, and by the same
+script-can-read-it caveat as TD-24. The second is a `GET /api/chat`
+reading the employee's own chat logs, which is the honest fix and needs
+Jared to agree a tenth endpoint.
+
+### TD-34 — The question length limit is written down twice
+
+**Taken:** 17 November 2026, in ON-48 · **Status:** Open · **Ticket:** none
+
+**What.** `MAX_QUESTION_CHARACTERS` is 2000 in the LLM Gateway
+(`backend/app/services/llm/gateway.py`) and 2000 again in the frontend's
+chat client (`frontend/src/api/chat.ts`). Nothing checks that the two
+agree.
+
+**Why.** The frontend needs it to stop somebody mid-sentence rather than
+after a round trip, and there is no shared source for a Python constant
+and a TypeScript one to read. The alternatives were to generate a
+TypeScript file from the settings at build time — a build step and a
+generated file committed or not committed, both of which are their own
+argument — or to let the page send anything and show the 422, which
+means an employee discovers the limit by hitting it.
+
+**Impact.** Bounded, and in the safe direction. The backend is the
+authority: a question that gets past the page's check is still refused
+there, and the page shows that refusal. So the two drifting produces a
+worse experience, never a wrong answer — if the backend's limit drops,
+the page lets somebody type past it and they get a 422; if it rises, the
+page is stricter than it needs to be. Neither is silent, because both
+ends tell the person a number.
+
+**Mitigation.** A test at each end pins the literal 2000 rather than
+comparing the constant with itself, so moving one and not the other
+fails a test rather than passing quietly — which is most of what a
+shared source would have bought. What is missing is a test that reads
+both, and the only place that could live is CI, where both languages are
+already installed. A dozen lines in the Integration job.

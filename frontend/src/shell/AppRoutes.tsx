@@ -16,6 +16,7 @@ import { Navigate, Route, Routes } from 'react-router'
 import type { ReactNode } from 'react'
 
 import AppShell from './AppShell'
+import ChatPage from './ChatPage'
 import DocumentsPage from './DocumentsPage'
 import LoginPage from './LoginPage'
 import NotAvailableYet from './NotAvailableYet'
@@ -32,6 +33,7 @@ import { DEFAULT_PATH, LOGIN_PATH, ROUTES } from './navigation'
  * at a path the rail does not show.
  */
 const PAGES: Record<string, ReactNode> = {
+  '/chat': <ChatPage />,
   '/documents': <DocumentsPage />,
 }
 
