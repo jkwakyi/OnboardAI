@@ -11,6 +11,7 @@ on a database built by `create_all` while the real database, built by
 compares the result against the models.
 """
 
+import logging
 from pathlib import Path
 
 import pytest
@@ -99,3 +100,20 @@ def test_every_revision_can_be_undone():
         source = path.read_text(encoding="utf-8")
         body = source.split("def downgrade()", 1)[1]
         assert "pass" != body.split(":", 1)[1].strip(), f"{path.name} cannot be undone"
+
+
+def test_running_a_migration_does_not_switch_off_the_application_loggers(sqlite_url):
+    """Alembic configures logging, and its default is to silence everything.
+
+    `logging.config.fileConfig` disables every logger that already exists
+    unless told otherwise, and `migrations/env.py` runs at import. From a
+    command line that costs nothing. In this process it would disable the
+    whole application - and the symptom is not a failure, it is tests
+    about logging quietly passing against no log at all.
+    """
+    logger = logging.getLogger("app.services.retrieval.service")
+
+    command.upgrade(_config(sqlite_url), "head")
+
+    assert not logger.disabled
+    assert not logging.getLogger("app.api.documents").disabled

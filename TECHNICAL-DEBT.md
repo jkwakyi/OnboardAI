@@ -45,6 +45,7 @@ See [How to add an entry](#how-to-add-an-entry).
 | [TD-26](#td-26--an-upload-cannot-be-cancelled) | An upload cannot be cancelled | Frontend | Open |
 | [TD-27](#td-27--the-mock-embedder-is-lexical-not-semantic) | The Mock Embedder is lexical, not semantic | Backend | Open |
 | [TD-28](#td-28--vectors-are-written-outside-the-sql-transaction) | Vectors are written outside the SQL transaction | Backend | Open |
+| [TD-29](#td-29--an-existing-chromadb-collection-cannot-be-moved-to-cosine) | An existing ChromaDB collection cannot be moved to cosine | Storage | Accepted |
 
 Status is **Open** (we intend to pay it back), **Accepted** (we have decided
 to live with it, and the entry says why), or **Mitigated** (paid back; kept
@@ -970,3 +971,40 @@ asking. A reconciliation command (count sections against vectors per
 document, re-embed the difference) is perhaps thirty lines on top of what
 ON-41 already provides, and `DELETE /api/documents/{id}` in ON-16 has to
 call `forget_document` anyway, so the same ground gets walked again there.
+
+### TD-29 — An existing ChromaDB collection cannot be moved to cosine
+
+**Taken:** 17 November 2026, in ON-43 · **Status:** Accepted · **Ticket:** none
+
+**What.** The Retrieval Service scores a match as `1 - distance`, which is
+only true if the collection measures distance by cosine. ChromaDB's
+default is `l2` — squared Euclidean — so `app/vectorstore/chroma.py` now
+asks for cosine explicitly. It cannot ask for an existing collection to
+change: `get_or_create_collection` ignores the metadata when the
+collection is already there, hands back the old one, and says nothing. So
+a collection created by an earlier build is refused at the point of use,
+with a message naming it and the command to delete it. Putting it right is
+a manual delete and a re-upload of every document.
+
+**Why.** ChromaDB has no "change the distance function" operation; the
+index is built around the metric. A real migration would mean reading
+every vector out, creating a second collection, writing them back and
+swapping the name — a few dozen lines, plus a way to run it, plus a way to
+know it is needed. Against that: the alpha has one deployment, that
+deployment's collection was empty when this landed, and the documents can
+be re-uploaded through the UI in a minute.
+
+**Impact.** Anybody who had vectors in an `l2` collection — nobody, at the
+time of writing — loses them and re-uploads. Everybody else sees nothing.
+The failure, if it happens, is loud and names its own remedy: uploads and
+retrieval both stop with a message saying which collection is wrong and
+what to run. Both are refused, which is deliberate; the wrong half of this
+to leave working would be the half that quietly produces plausible scores.
+
+**Mitigation.** The check itself, which is the point. It reads the space
+back from the collection ChromaDB actually returned rather than trusting
+the request, because those differ in exactly the case that matters, and it
+refuses an unknown space as well as a wrong one. Three tests cover it,
+including a collection that declines to say. If a reconciliation command
+ever gets written for TD-28, re-embedding into a fresh collection is the
+same work and would close this with it.

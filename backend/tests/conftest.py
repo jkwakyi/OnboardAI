@@ -1,5 +1,7 @@
 """Shared test fixtures."""
 
+import math
+from collections.abc import Sequence
 from typing import Any
 
 import pytest
@@ -115,24 +117,46 @@ def auth_env(monkeypatch):
     reset()
 
 
+def cosine_distance(left: Sequence[float], right: Sequence[float]) -> float:
+    """What ChromaDB reports for a collection in cosine space.
+
+    0.0 for two vectors pointing the same way, 1.0 for perpendicular, 2.0
+    for opposite. Written out here rather than imported from the code
+    under test, so a test asserting on a distance is asserting against
+    arithmetic and not against the implementation's opinion of itself.
+    """
+    dot = sum(a * b for a, b in zip(left, right, strict=True))
+    size = math.sqrt(sum(a * a for a in left)) * math.sqrt(sum(b * b for b in right))
+    if size == 0.0:
+        return 1.0
+    return 1.0 - dot / size
+
+
 class FakeCollection:
-    """An in-memory stand-in for the ChromaDB collection (ON-41).
+    """An in-memory stand-in for the ChromaDB collection (ON-41, ON-43).
 
     The real one needs a running Vector Database, which a unit test must
     not need. This keeps what was written so a test can assert on it, and
     can be told to fail so the discard path is reachable.
 
-    It deliberately enforces the two rules the real collection enforces and
-    that our code could otherwise break silently: ids are strings, and
-    every vector in a collection has the same width.
+    It deliberately enforces the rules the real collection enforces and
+    that our code could otherwise break silently: ids are strings, every
+    vector in a collection has the same width, and `query` really does
+    rank by cosine distance rather than handing back insertion order. A
+    fake that returned rows in the order they were added would make the
+    Retrieval Service's ordering tests pass without ordering anything.
     """
 
     def __init__(self) -> None:
         self.rows: dict[str, tuple[list[float], dict[str, Any]]] = {}
         self.upsert_calls: list[int] = []
         self.documents_seen: list[Any] = []
+        self.query_calls: list[dict[str, Any]] = []
         self.fail_with: Exception | None = None
         self.width: int | None = None
+        # The real collection reports the space it was created in, and
+        # `app.vectorstore.chroma` refuses one that is not cosine.
+        self.configuration_json: dict[str, Any] = {"hnsw": {"space": "cosine"}}
 
     # --- the parts of the ChromaDB API our code uses --------------------
 
@@ -160,6 +184,33 @@ class FakeCollection:
                     raise ValueError(f"ChromaDB metadata cannot be null; {key!r} is")
             self.rows[identifier] = (list(vector), dict(metadata))
         self.upsert_calls.append(len(ids))
+
+    def query(self, query_embeddings, n_results=10, include=None, **kwargs) -> dict[str, Any]:
+        self.query_calls.append({"n_results": n_results, "include": list(include or []), **kwargs})
+        if self.fail_with is not None:
+            raise self.fail_with
+        if len(query_embeddings) != 1:
+            raise AssertionError("the Retrieval Service asks one question at a time")
+
+        asked = query_embeddings[0]
+        if self.width is not None and len(asked) != self.width:
+            raise ValueError(
+                f"Collection expecting embedding with dimension of {self.width}, got {len(asked)}"
+            )
+
+        ranked = sorted(
+            (
+                (cosine_distance(asked, vector), identifier, metadata)
+                for identifier, (vector, metadata) in self.rows.items()
+            ),
+            key=lambda row: (row[0], row[1]),
+        )[:n_results]
+        return {
+            "ids": [[identifier for _distance, identifier, _metadata in ranked]],
+            "distances": [[distance for distance, _identifier, _metadata in ranked]],
+            "metadatas": [[metadata for _distance, _identifier, metadata in ranked]],
+            "included": list(include or []),
+        }
 
     def delete(self, where=None, ids=None) -> None:
         if ids is not None:
