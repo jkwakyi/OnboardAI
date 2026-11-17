@@ -558,7 +558,7 @@ def model_failures() -> None:
 # --- 6. escalation ------------------------------------------------------
 
 
-def escalation(employee_token: str, chat_log_id: int | None) -> None:
+def escalation(employee_token: str, hr_token: str, chat_log_id: int | None) -> None:
     section("6. The employee sends the question to HR (E1-E2, ON-20)")
 
     if chat_log_id is None:
@@ -587,7 +587,28 @@ def escalation(employee_token: str, chat_log_id: int | None) -> None:
     )
 
     status, _, _ = call("POST", "/escalations", token=employee_token, body={"chat_log_id": 99999})
-    report.check("an answer that is not yours cannot be escalated", status == 404, f"got {status}")
+    report.check(
+        "an answer that does not exist cannot be escalated", status == 404, f"got {status}"
+    )
+
+    # The one that matters, and it needs a second person. E4 shows HR's
+    # reply against the chat it belongs to, so escalating a colleague's
+    # question is a way of reading the answer to it - which makes this a
+    # read as much as a write. Auth Check guards routes, not rows (TD-21).
+    status, theirs, _ = call(
+        "POST", "/chat/ask", token=hr_token, body={"question": "Is there a creche on site?"}
+    )
+    if status == 200 and theirs.get("id"):
+        status, _, _ = call(
+            "POST", "/escalations", token=employee_token, body={"chat_log_id": theirs["id"]}
+        )
+        report.check(
+            "a colleague's answer cannot be escalated, and is a 404 not a 403",
+            status == 404,
+            f"got {status} - a 403 would confirm the answer exists",
+        )
+    else:
+        report.check("a colleague's answer cannot be escalated", False, "could not set it up")
 
 
 # --- 7. secrets ---------------------------------------------------------
@@ -740,7 +761,7 @@ def main() -> int:
     upload(hr_token)
     chat_log_id = asking(employee_token)
     model_failures()
-    escalation(employee_token, chat_log_id)
+    escalation(employee_token, hr_token, chat_log_id)
     secrets_stay_out_of_the_repository()
     not_built_yet(hr_token, employee_token)
 

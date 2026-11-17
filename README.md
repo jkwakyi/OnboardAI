@@ -713,7 +713,7 @@ no unit test does, because none of them can.
 python scripts/alpha_smoke_test.py
 ```
 
-Forty-eight checks across the whole alpha path: logging in, Auth Check
+Forty-nine checks across the whole alpha path: logging in, Auth Check
 turning away the tokens it should, the handbook uploaded and landing in
 both databases, a cited answer from the real model, an unanswerable
 question returning the HR fallback, the three ways the model can fail all

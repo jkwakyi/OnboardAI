@@ -25,8 +25,8 @@ EMBEDDING_PROVIDER=openai  model=text-embedding-3-small
 3. The HR administrator uploads the handbook (U1-U4, ON-15)
 -----------------------------------------------------------
   [PASS] the handbook is present (8 chapters)
-  [PASS] all 8 chapters uploaded and were read on the way in - 8 of 8, slowest 0.7s
-  [PASS] every upload finished inside 10s - slowest 0.7s
+  [PASS] all 8 chapters uploaded and were read on the way in - 8 of 8, slowest 0.6s
+  [PASS] every upload finished inside 10s - slowest 0.6s
   [PASS] an unsupported file type is refused rather than stored - got 415
   [PASS] a document with no readable text is refused - got 422
   [PASS] 8 documents and their sections are in PostgreSQL - 8 documents, 62 sections
@@ -34,19 +34,19 @@ EMBEDDING_PROVIDER=openai  model=text-embedding-3-small
 
 4. An employee asks (steps 1-9, ON-17, ON-18)
 ---------------------------------------------
-         first question took 1.7s
+         first question took 1.6s
   [PASS] an answerable question is answered rather than refused - 200, fallback=False
   [PASS] the answer carries at least one citation - 1 citation(s)
   [PASS] the citation names the chapter that answers the question - 04-time-off-and-leave.pdf / 4.1 PAID TIME OFF
   [PASS] the answer is not the Mock LLM's - Regular full-time employees accrue PTO according to length of service:
          answer: Regular full-time employees accrue PTO according to length of service: 15 days per year for years 1 and 2, 20 days per year for years 3 to 5, and 25 d
-  [PASS] the answer came back inside the Gateway's 20s - 2.0s
-  [PASS] ...and, with the model loaded, inside the 12s target - 2.0s
-  [PASS] even a cold first question stays inside the contractual limit - 1.7s - if this fails it is TD-36, not a regression
+  [PASS] the answer came back inside the Gateway's 20s - 1.4s
+  [PASS] ...and, with the model loaded, inside the 12s target - 1.4s
+  [PASS] even a cold first question stays inside the contractual limit - 1.6s - if this fails it is TD-36, not a regression
   [PASS] an unanswerable question returns the HR fallback, not an error - 200, fallback=True
   [PASS] the fallback points the employee at HR - I could not find an answer to that in the approved HR documents. Pleas
   [PASS] the fallback cites nothing, because nothing was used - 0 citation(s)
-  [PASS] the model was never asked, so the refusal is fast - 0.4s
+  [PASS] the model was never asked, so the refusal is fast - 0.3s
   [PASS] an empty question is refused with 422 - got 422
   [PASS] an oversized question is refused with 422 - got 422
 
@@ -65,8 +65,9 @@ returning the HR fallback: the provider did not answer within 0.05 seconds
   [PASS] the fallback can be sent to HR - got 201
   [PASS] HR receives the question as the employee asked it - What is the capital of Mongolia?
   [PASS] it arrives open, waiting for a reply
-  [PASS] sending it twice does not put it in the inbox twice - ids 6 and 6
-  [PASS] an answer that is not yours cannot be escalated - got 404
+  [PASS] sending it twice does not put it in the inbox twice - ids 7 and 7
+  [PASS] an answer that does not exist cannot be escalated - got 404
+  [PASS] a colleague's answer cannot be escalated, and is a 404 not a 403 - got 404 - a 403 would confirm the answer exists
 
 7. Keys are not in the repository
 ---------------------------------
@@ -86,13 +87,13 @@ returning the HR fallback: the provider did not answer within 0.05 seconds
 
 Timings
 -------
-  login              n=2   median  0.41s  slowest  0.41s
-  upload             n=8   median  0.62s  slowest  0.73s
-  ask (first, possibly cold) n=1   median  1.71s  slowest  1.71s
-  ask (answered)     n=1   median  2.00s  slowest  2.00s
-  ask (fallback)     n=1   median  0.38s  slowest  0.38s
+  login              n=2   median  0.39s  slowest  0.39s
+  upload             n=8   median  0.54s  slowest  0.62s
+  ask (first, possibly cold) n=1   median  1.59s  slowest  1.59s
+  ask (answered)     n=1   median  1.44s  slowest  1.44s
+  ask (fallback)     n=1   median  0.33s  slowest  0.33s
   escalate           n=1   median  0.02s  slowest  0.02s
 
 Result
 ------
-  48 of 48 checks passed
+  49 of 49 checks passed
