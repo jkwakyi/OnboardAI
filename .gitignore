@@ -43,3 +43,6 @@ Thumbs.db
 # Per-developer Claude Code settings. .claude/launch.json is shared on
 # purpose: it is how the dev server is started from the editor.
 .claude/settings.local.json
+
+# Local dev server logs
+.dev-*.log

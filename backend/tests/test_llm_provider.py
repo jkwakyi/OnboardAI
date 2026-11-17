@@ -9,15 +9,29 @@ kinds of broken provider the contracts name, because the LLM Gateway
 
 import inspect
 import json
+import logging
 import time
 
 import pytest
 
 from app.config import Settings, get_settings
-from app.services.llm import PROVIDERS, LLMError, LLMProvider, MockLLM, get_provider
+from app.services.llm import (
+    PROVIDERS,
+    LLMError,
+    LLMProvider,
+    MockLLM,
+    RealLLMClient,
+    get_provider,
+)
 from app.services.llm.mock import NO_CONTEXT_ANSWER
 
 PROMPT = "Answer from the following.\n\n[section:42] 5.1 ELIGIBILITY\nText.\n"
+
+
+@pytest.fixture
+def real_llm_settings() -> Settings:
+    """Settings naming the real provider, without touching the environment."""
+    return Settings(_env_file=None, llm_provider="real", llm_model="qwen3:8b")
 
 
 # --- the interface the contracts fix ----------------------------------
@@ -198,13 +212,36 @@ def test_an_unknown_provider_is_an_error_rather_than_a_quiet_fallback():
         get_provider(Settings(llm_provider="gpt-9"))
 
 
-def test_the_real_provider_is_not_selectable_yet():
-    """ON-18's to add. A name that resolves to nothing is better than one
-    that resolves to a stub nobody notices."""
-    assert "real" not in PROVIDERS
+def test_selecting_the_mock_says_so_loudly(caplog):
+    """The mock is the default, so this is the line that stands between a
+    deployment that believes it has a model and one that answers every
+    question with "this came from the Mock LLM". At debug level nobody
+    sees it."""
+    with caplog.at_level(logging.WARNING):
+        get_provider(Settings(_env_file=None, llm_provider="mock"))
 
-    with pytest.raises(RuntimeError, match="ON-18"):
-        get_provider(Settings(llm_provider="real"))
+    assert any(record.levelno >= logging.WARNING for record in caplog.records)
+    assert "does not read the handbook" in caplog.text
+
+
+def test_selecting_the_real_provider_does_not_warn(caplog, real_llm_settings):
+    with caplog.at_level(logging.WARNING):
+        get_provider(real_llm_settings)
+
+    assert [record for record in caplog.records if record.levelno >= logging.WARNING] == []
+
+
+def test_the_real_provider_is_selectable(real_llm_settings):
+    """ON-18 added it. Building one must not reach for the model: the
+    constructor only reads configuration, so a teammate with
+    LLM_PROVIDER=real and nothing running gets an error from the first
+    question rather than from starting the backend."""
+    assert "real" in PROVIDERS
+
+    provider = get_provider(real_llm_settings)
+
+    assert isinstance(provider, RealLLMClient)
+    assert "qwen3:8b" in provider.name
 
 
 def test_every_registered_provider_implements_the_interface():
