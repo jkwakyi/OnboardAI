@@ -13,6 +13,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 # Repository root, two levels above this file (backend/app/config.py).
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
+# The LLM Gateway's contractual 20 seconds, copied rather than imported:
+# the LLM package reads this module, so importing it back would close the
+# loop. `test_config.py` asserts this copy still matches the Gateway's.
+GATEWAY_TIMEOUT_SECONDS = 20.0
+
 
 class Settings(BaseSettings):
     """Settings for the backend API."""
@@ -60,6 +65,30 @@ class Settings(BaseSettings):
     # LLM provider selection. "mock" keeps CI and teammates without the
     # model running; see the LLMProvider interface (ON-44) and ON-18.
     llm_provider: str = "mock"
+
+    # Where the local model is served, and which one (ON-18). Ollama on
+    # the loopback address: no key, and the handbook text in the prompt
+    # never leaves the machine.
+    #
+    # `qwen3:8b` was selected against the ticket's criteria over
+    # `mistral:7b` and `llama3.2:latest`, measured on the real prompts the
+    # Gateway builds. It answered all five test questions inside the
+    # Gateway's 20 seconds (slowest 4.3s) with a verified citation each
+    # time. `llama3.2` managed one of five - it cites the handbook's own
+    # numbering ("4.1") rather than the section id the prompt gave it, and
+    # the Gateway drops a citation it cannot match. `deepseek-r1:14b` is
+    # not a candidate: its thinking traces fight the JSON check.
+    llm_api_url: str = "http://127.0.0.1:11434/api/generate"
+    llm_model: str = "qwen3:8b"
+    # How long the model stays resident between questions. A cold load
+    # measured 56 seconds, which is past the Gateway's limit, so an idle
+    # deployment answers its first question with the HR fallback (TD-36).
+    llm_keep_alive: str = "30m"
+    # Not the contractual timeout - that is the LLM Gateway's 20 seconds,
+    # enforced there. This only bounds how long a call the Gateway has
+    # already given up on can sit holding a socket, so it is deliberately
+    # the longer of the two.
+    llm_timeout_seconds: float = 30.0
 
     # How good the best retrieved section has to be before the QA
     # Controller will ask the LLM anything at all (ON-46). Below this, the
@@ -179,6 +208,32 @@ class Settings(BaseSettings):
         """A batch of nothing would send no sections and report success."""
         if value < 1:
             raise ValueError("EMBEDDING_BATCH_SIZE must be at least 1")
+        return value
+
+    @field_validator("llm_timeout_seconds")
+    @classmethod
+    def _llm_timeout_must_outlast_the_gateway(cls, value: float) -> float:
+        """Shorter than the Gateway's limit and this becomes the timeout.
+
+        The contracts fix the wait at 20 seconds and put it in the
+        Gateway. A socket timeout below that would cut the provider off
+        first, so every slow answer would be reported as a provider error
+        rather than a timeout - the employee sees the same fallback either
+        way, but ON-24's measurements and the log would both be wrong
+        about which of the two happened.
+
+        `GATEWAY_TIMEOUT_SECONDS` is a copy of the Gateway's constant
+        rather than an import, because importing the LLM package from
+        configuration would make the two import each other. A test
+        asserts the copy still matches.
+        """
+        if value <= GATEWAY_TIMEOUT_SECONDS:
+            raise ValueError(
+                f"LLM_TIMEOUT_SECONDS is {value}, which is not longer than the "
+                f"LLM Gateway's contractual {GATEWAY_TIMEOUT_SECONDS} seconds; "
+                f"the Gateway is what gives up on a slow model, and this only "
+                f"bounds the call it has abandoned"
+            )
         return value
 
     @field_validator("relevance_threshold")

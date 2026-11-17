@@ -52,6 +52,7 @@ See [How to add an entry](#how-to-add-an-entry).
 | [TD-33](#td-33--a-refresh-loses-the-conversation) | A refresh loses the conversation | Frontend | Open |
 | [TD-34](#td-34--the-question-length-limit-is-written-down-twice) | The question length limit is written down twice | Frontend | Open |
 | [TD-35](#td-35--one-escalation-per-question-is-a-convention-not-a-constraint) | One escalation per question is a convention, not a constraint | Storage | Open |
+| [TD-36](#td-36--a-cold-model-load-outlasts-the-gateways-timeout) | A cold model load outlasts the Gateway's timeout | AI Chatbot Module | Open |
 
 Status is **Open** (we intend to pay it back), **Accepted** (we have decided
 to live with it, and the entry says why), or **Mitigated** (paid back; kept
@@ -1253,3 +1254,40 @@ unique index, with the insert told to ignore a conflict rather than
 raise, would close it properly,
 and ON-21 touches this table anyway for the HR Inbox, so the same ground
 gets walked again there.
+
+### TD-36 — A cold model load outlasts the Gateway's timeout
+
+**Taken:** 17 November 2026, in ON-18 · **Status:** Open · **Ticket:** none
+
+**What.** The Real LLM Client asks Ollama to keep the model resident
+between questions (`LLM_KEEP_ALIVE`, 30 minutes). While it is resident an
+answer takes about four seconds. Loading it does not: `qwen3:8b` took
+**56 seconds** to load on this hardware, measured from cold. The LLM
+Gateway gives up at the contractual 20, so the first question asked after
+the model has been unloaded gets the HR fallback — for a question the
+handbook answers perfectly well — and the second one, a moment later,
+gets a real answer.
+
+**Why.** The fix that works is to load the model before anybody asks: a
+warm-up call when the backend starts, and something keeping it warm
+afterwards. Both were out of scope for ON-18, and the startup one is not
+as simple as it sounds — the backend currently starts in under a second
+and blocking it for a minute on a model load would make `docker compose
+up`, the test suite and CI all wait for something only the real provider
+needs. Doing it in the background instead means a half-started backend
+that answers some questions and falls back on others, which is worse than
+the honest version of the same problem.
+
+**Impact.** Narrow but confusing, and it will happen during a demo if the
+demo starts with a pause. The employee sees the HR fallback with no
+indication that trying again would work, and "it worked the second time"
+is the kind of symptom that gets written off as flakiness rather than
+investigated. It does not affect the mock provider, so CI never sees it.
+
+**Mitigation.** `LLM_KEEP_ALIVE` is 30 minutes rather than Ollama's
+default of 5, so the window where this can happen is six times narrower.
+The Gateway logs the timeout with its reason, so the cause is in the log
+even though the employee cannot see it. For a demo, ask one throwaway
+question first — the model stays loaded for the next half hour. A startup
+warm-up belongs with ON-24, which has to run the whole question set
+through the real model anyway and will hit this on its first question.
