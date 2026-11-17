@@ -26,6 +26,12 @@ from typing import Any
 
 from jira import SITE, build_board, save_board
 
+# What a search has to ask for before this can build a correct board.
+# `priority` and `duedate` only affect the order within a column, so a
+# board without them is untidy rather than wrong; the two below change
+# which tickets are counted at all.
+REQUIRED_FIELDS = ("issuetype", "key", "status", "summary")
+
 
 def _issue_nodes(payload: dict[str, Any]) -> list[dict[str, Any]]:
     """Pull the issue list out of either response shape."""
@@ -35,6 +41,33 @@ def _issue_nodes(payload: dict[str, Any]) -> list[dict[str, Any]]:
     if isinstance(issues, list):
         return issues
     raise ValueError("no issues found; expected {'issues': [...]} or {'issues': {'nodes': [...]}}")
+
+
+def check_fields_are_present(issues: list[dict[str, Any]]) -> None:
+    """Refuse a search result that is missing a field the board filters on.
+
+    `build_board` drops epics by `issuetype` and ignores the
+    administrative tickets by key. A search that did not ask for
+    `issuetype` returns issues with no type at all, so no epic is
+    recognised and all nine are counted as development tickets - which
+    does not fail, does not warn, and quietly changes the denominator
+    the percentage is built on.
+
+    That happened: the same board synced as "46 development tickets, 46%
+    done" from one search and "55 development tickets, 42% done" from
+    another, minutes apart, with nothing on the board changed in between.
+    A panel whose job is to let somebody see the board without opening
+    Jira has to be wrong loudly or not at all.
+    """
+    if not issues:
+        return
+    missing = [name for name in ("issuetype", "status") if not any(i.get(name) for i in issues)]
+    if missing:
+        raise ValueError(
+            f"no issue carries {' or '.join(missing)}, so the board cannot be built "
+            f"correctly - the search needs to ask for "
+            f"{', '.join(sorted(REQUIRED_FIELDS))}"
+        )
 
 
 def normalise(raw: dict[str, Any]) -> dict[str, Any]:
@@ -65,7 +98,9 @@ def main() -> int:
         return 1
 
     try:
-        issues = [normalise(raw) for raw in _issue_nodes(payload)]
+        nodes = _issue_nodes(payload)
+        check_fields_are_present([node.get("fields", {}) for node in nodes])
+        issues = [normalise(raw) for raw in nodes]
     except (ValueError, KeyError) as exc:
         print(f"unexpected shape in {path}: {exc}", file=sys.stderr)
         return 1
