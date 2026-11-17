@@ -117,3 +117,31 @@
   justify-content: flex-end;
   margin-top: var(--space-3);
 }
+
+/* --- Send to HR (ON-20) --- */
+
+.chat__escalate {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+/* The confirmation that replaces the button. Not a pill: it is a
+   sentence, and a pill would make it look like another status on the
+   answer rather than the result of something the person just did. */
+.chat__sent {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.chat__sent-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.chat__sent strong {
+  color: var(--text);
+  font-weight: var(--weight-medium);
+}

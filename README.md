@@ -420,6 +420,38 @@ and those get an alert and, where trying again could work, a retry.
 (ON-47), but none of the nine endpoints reads chat history back, so a
 reload starts an empty page. Nothing on the page pretends otherwise.
 
+### Sending a question to HR
+
+A fallback is the end of what the assistant can do, so it carries a
+**Send to HR** button (E1). Pressing it saves the question as an open
+escalation (E2); once it is saved the button is replaced — not disabled
+— by a line saying HR has the question and will reply here. A disabled
+button says "you cannot do this"; what is true is "this is done".
+
+`POST /api/escalations` takes **one field**, `chat_log_id`, and nothing
+else:
+
+```json
+{ "chat_log_id": 13 }
+```
+
+The question is not sent. The server reads what was asked out of that
+chat log, which is the only way the question in HR's inbox is the
+question the employee actually asked — otherwise any caller could put
+any words in front of an HR administrator, attached to a chat log that
+says something else. The endpoint also refuses an answer that is not the
+caller's (`404`, worded identically to one that does not exist, so the
+two cannot be told apart) and one that was answered rather than fallen
+back on (`409`). The button only appears on a fallback, but a button
+that is absent is not a rule.
+
+Pressing it twice is safe: the open escalation that already exists comes
+back rather than a second one. What that does and does not guarantee is
+[TD-35](TECHNICAL-DEBT.md#td-35--one-escalation-per-question-is-a-convention-not-a-constraint).
+
+HR replying and the employee seeing the reply (E3, E4) are ON-21 and
+ON-22, so for now an escalation goes into the table and waits.
+
 ### Finding the sections that answer a question
 
 The Retrieval Service (`backend/app/services/retrieval/`) does steps 5 and
@@ -711,6 +743,7 @@ backend/
       retrieval/  the Retrieval Service: question in, top 5 sections out
       qa/         the QA Controller: the relevance threshold and the fallback
       logs/       the Logging Service: saved chats
+      escalations/ the Escalation Service: a fallback question sent to HR
     vectorstore/  Vector Database (ChromaDB) client
     config.py     settings, read from the environment
     main.py       application factory

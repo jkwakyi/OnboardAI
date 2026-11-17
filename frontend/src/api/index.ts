@@ -6,7 +6,7 @@
  * token, and one place that decides what a status code means to a person.
  *
  * The endpoints arrive with their own tickets. `auth` is ON-38's;
- * documents are ON-42, chat is ON-48, escalations are ON-66.
+ * documents are ON-42, chat is ON-48, escalations are ON-20.
  */
 export { login } from './auth'
 export {
@@ -16,6 +16,7 @@ export {
   type Citation,
 } from './chat'
 export { API_BASE_URL, createApiClient, type ApiClient, type RequestOptions } from './client'
+export { sendToHr, type Escalation } from './escalations'
 export { FILE_FIELD, uploadDocument, type UploadedDocument } from './documents'
 export { uploadWithProgress, type UploadOptions } from './upload'
 export {
