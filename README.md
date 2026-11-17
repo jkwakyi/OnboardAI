@@ -19,7 +19,7 @@ Built for CMSC 495 by Brad Campos, Jared Ahenkora-Kwakyi and Muhammed Ayday.
 | Main Database | PostgreSQL — users, documents, sections, chat logs, feedback, escalations |
 | Vector Database | ChromaDB — section embeddings |
 | Embedding API | OpenAI `text-embedding-3-small`, called over HTTPS |
-| LLM | Behind an `LLMProvider` interface; Mock LLM or a real provider |
+| LLM | Behind an `LLMProvider` interface; `qwen3:8b` on local Ollama, or the Mock LLM |
 
 The design is fixed and lives in [`docs/`](docs/). The Interface Contracts are
 the source of truth for endpoints, fields and error formats.
@@ -585,7 +585,7 @@ be assessed.
 
 ### Which language model answers
 
-Nothing downloads a model and nothing needs a key:
+Out of the box, nothing downloads a model and nothing needs a key:
 
 ```
 LLM_PROVIDER=mock
@@ -597,6 +597,52 @@ implements it and is the default, so CI, the frontend and a teammate
 without the weights can all run the answer path. Its answers say plainly
 that they came from a mock: a fake answer that reads like a real HR one is
 a fake answer somebody eventually screenshots into a report.
+
+#### Real answers, from a model on your own machine
+
+The **Real LLM Client** implements the same interface and talks to
+[Ollama](https://ollama.com) over the loopback address. There is no key
+and nothing leaves the machine — the handbook text in the prompt goes no
+further than your own GPU.
+
+```bash
+ollama pull qwen3:8b
+```
+
+```
+LLM_PROVIDER=real
+LLM_MODEL=qwen3:8b
+LLM_API_URL=http://127.0.0.1:11434/api/generate
+```
+
+`qwen3:8b` was chosen by running the candidates against the prompts the
+Gateway actually builds, over the real handbook:
+
+| Model | Answered | Slowest | Why |
+| --- | --- | --- | --- |
+| **qwen3:8b** | **5 of 5** | **4.3 s** | Selected. |
+| `mistral:7b` | 4 of 5 | 3.8 s | Cited section 1 while naming 650 in its prose. |
+| `llama3.2:latest` | 1 of 5 | 1.6 s | Cites the handbook's own numbering (`4.1`) rather than the section id it was given, so the Gateway drops every citation. |
+
+`deepseek-r1:14b` was not a candidate: its thinking traces fight the JSON
+check.
+
+**Reasoning is turned off** in the request, and that is the difference
+between working and not. The same question took 18.6 seconds with qwen3
+thinking and 4.0 without — identical answer, identical citation, 380
+output tokens against 87. The Gateway allows 20, so thinking on spends
+most of the budget generating text the JSON check discards.
+
+End to end through `POST /api/chat/ask`, with the model loaded: eight
+questions, slowest **8.2 s**, median **4.9 s**. The two unanswerable ones
+came back in 0.3 and 1.7 seconds, because below the relevance threshold
+the QA Controller never asks the model at all.
+
+A model that has been unloaded takes about a minute to load, which is past
+the Gateway's limit — so the first question after a long pause gets the HR
+fallback and the next one works. `LLM_KEEP_ALIVE` holds it for 30 minutes;
+the rest is
+[TD-36](TECHNICAL-DEBT.md#td-36--a-cold-model-load-outlasts-the-gateways-timeout).
 
 It can also be told to be slow, to raise, or to return something that is
 not JSON — the three conditions the contracts say produce the HR fallback,
@@ -622,10 +668,10 @@ the same HR fallback message. The reason they differ goes to the log, not to
 whoever asked the question.
 
 An unrecognised `LLM_PROVIDER` is a startup error, not a quiet fall back
-to the mock. A deployment that believes it is using a real model while
-answering every question with "this came from the Mock LLM" would say so
-nowhere anybody is looking. `real` becomes selectable with ON-18; what is
-and is not true today is
+to the mock, and selecting the mock logs a warning every time. A
+deployment that believes it is using a real model while answering every
+question with "this came from the Mock LLM" would say so nowhere anybody
+is looking. The mock stays the default because CI has no GPU; see
 [TD-01](TECHNICAL-DEBT.md#td-01--the-mock-llm-is-the-default-provider).
 
 ## Tests and lint
@@ -739,7 +785,7 @@ backend/
       auth/       password hashing, login tokens, the seeded accounts
       documents/  File Storage, text extraction, sections
       embedding/  the Embedding Client, the hosted API and the mock
-      llm/        the LLMProvider interface and the Mock LLM
+      llm/        the LLMProvider interface, the Mock LLM and the real client
       retrieval/  the Retrieval Service: question in, top 5 sections out
       qa/         the QA Controller: the relevance threshold and the fallback
       logs/       the Logging Service: saved chats
