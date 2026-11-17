@@ -51,6 +51,7 @@ See [How to add an entry](#how-to-add-an-entry).
 | [TD-32](#td-32--the-most-expensive-endpoint-has-no-rate-limit) | The most expensive endpoint has no rate limit | Backend API | Open |
 | [TD-33](#td-33--a-refresh-loses-the-conversation) | A refresh loses the conversation | Frontend | Open |
 | [TD-34](#td-34--the-question-length-limit-is-written-down-twice) | The question length limit is written down twice | Frontend | Open |
+| [TD-35](#td-35--one-escalation-per-question-is-a-convention-not-a-constraint) | One escalation per question is a convention, not a constraint | Storage | Open |
 
 Status is **Open** (we intend to pay it back), **Accepted** (we have decided
 to live with it, and the entry says why), or **Mitigated** (paid back; kept
@@ -1215,3 +1216,40 @@ fails a test rather than passing quietly — which is most of what a
 shared source would have bought. What is missing is a test that reads
 both, and the only place that could live is CI, where both languages are
 already installed. A dozen lines in the Integration job.
+
+### TD-35 — One escalation per question is a convention, not a constraint
+
+**Taken:** 17 November 2026, in ON-20 · **Status:** Open · **Ticket:** none
+
+**What.** Sending the same fallback to HR twice returns the escalation
+that already exists rather than opening a second one, so a double click
+does not put the same question in HR's inbox twice. That is done by
+reading first and writing only if nothing came back. There is no unique
+constraint behind it: `escalations` has an index on `chat_log_id` and
+nothing that says one open escalation per chat log. Two requests that
+arrive close enough together can both read nothing and both insert.
+
+**Why.** The constraint that would actually enforce this is a *partial*
+unique index — unique on `(chat_log_id)` only where `status = 'open'`,
+because a resolved escalation and a new open one for the same question
+is a legitimate pair. PostgreSQL supports that; the SQLite the unit
+tests run against supports it too, but Alembic's autogenerate does not
+produce it and ON-11's schema is deliberately the same on both backends.
+Adding it means a hand-written migration and a schema the two databases
+agree on, which is a bigger change than the double click it prevents.
+
+**Impact.** Small, and bounded by how it can happen. Two tabs, or a very
+fast double click where the first request has not answered yet. The
+result is two rows in the HR Inbox with the same question, which an HR
+administrator resolves twice and finds mildly annoying. Nothing is lost
+and nothing is wrong; the inbox is just untidy. The employee sees one
+confirmation either way.
+
+**Mitigation.** The read-then-write closes the common case, which is a
+second press after the first has answered — by then the row exists and
+is found. The button also disables itself while sending, so the only
+route to a race is two tabs or a client that is not this page. A partial
+unique index, with the insert told to ignore a conflict rather than
+raise, would close it properly,
+and ON-21 touches this table anyway for the HR Inbox, so the same ground
+gets walked again there.
