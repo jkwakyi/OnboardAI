@@ -1,96 +1,46 @@
-# Contributing to OnboardAI
+# Contributing
 
-Three people push to this repository: Brad Campos, Jared Ahenkora-Kwakyi and
-Muhammed Ayday. These conventions keep the history readable and let us review
-each other's work.
+Three of us push to this repo: Brad, Jared and Muhammed. These are the rules
+we work to, so our history stays readable and we can review each other's
+work without guessing.
 
-## Before you start a ticket
+## Starting a ticket
 
-1. Pick a ticket from **To Do** on the
-   [ON board](https://jkwakyi.atlassian.net/jira/software/projects/ON),
-   highest priority first, then earliest due date.
-2. Read the ticket, its parent epic and its comments.
-3. Move it to **In Progress** and assign it to yourself.
-4. Update your local `main` first:
+Take the top ticket from **To Do** on the
+[ON board](https://jkwakyi.atlassian.net/jira/software/projects/ON) — highest
+priority, then earliest due date. Read it and its comments, move it to **In
+Progress**, and assign it to yourself.
+
+Update main before you branch:
 
 ```bash
 git checkout main && git pull --rebase origin main
 ```
 
-## Branches
+## Branches and commits
 
-One branch per ticket, cut from `main`, named for the ticket:
-
-```
-ON-<number>-short-slug
-```
-
-For example `ON-9-scaffold-backend-frontend`, `ON-11-main-database-schema`.
+One branch per ticket, cut from main, named after the ticket:
 
 ```bash
 git checkout -b ON-11-main-database-schema
 ```
 
-## Commit messages
-
-Every commit starts with its ticket key, then an imperative summary:
-
-```
-ON-<number>: imperative summary
-```
-
-Good:
+Every commit starts with the ticket key and an imperative summary:
 
 ```
 ON-11: add users and documents tables to the Main Database schema
-ON-44: add Mock LLM implementing the LLMProvider interface
 ```
 
-Not useful:
-
-```
-fix
-updates
-WIP
-```
-
-Keep commits small and meaningful — one logical change each. A reviewer
-should be able to read the subject line and know what changed. Add a body
-after a blank line when the *why* is not obvious from the diff:
-
-```
-ON-17: return the HR fallback when retrieval scores below threshold
-
-The contracts require that employees never see an invented policy, so a
-weak match skips the LLM entirely rather than prompting it with poor
-context.
-```
-
-Wrap the subject at about 72 characters and do not end it with a full stop.
+Not `fix`, not `updates`, not `WIP`. Keep commits small — one logical change
+each. If the reason isn't obvious from the diff, add a body after a blank
+line explaining why, not what.
 
 ## Pull requests
 
-One pull request per ticket, titled with the ticket key:
+One per ticket, titled `ON-<number>: what this delivers`. In the description
+say what changed and why, link the Jira ticket, and say how you tested it.
 
-```
-ON-<number>: what this delivers
-```
-
-The description should cover:
-
-- **What changed** and why.
-- **The Jira ticket**, linked:
-  `https://jkwakyi.atlassian.net/browse/ON-<number>`
-- **How it was tested** — the commands you ran and what passed.
-- Anything a reviewer should look at closely.
-
-Before opening it:
-
-```bash
-git pull --rebase origin main
-```
-
-and make sure tests and lint pass on both sides you touched:
+Before you open it, rebase on main and make sure both sides pass:
 
 ```bash
 cd backend && pytest && ruff check .
@@ -100,36 +50,28 @@ cd backend && pytest && ruff check .
 cd frontend && npm test && npm run lint
 ```
 
-Request review from a teammate. Once CI is green and the pull request is
-merged to `main`, move the ticket to **Done** and comment on it with what
-changed, the pull request link, and how it was tested.
+Ask a teammate for review. Once CI is green and it's merged, move the ticket
+to **Done** and comment with what changed, the PR link, and how you tested.
 
-## Never force-push
+## Don't force-push
 
-Do not force-push and do not rewrite history on `main` or on a shared
-branch. Others may have pulled it. If you need to undo something, add a
-commit that undoes it.
+Not on main, not on a shared branch. Someone else may have pulled it. If you
+need to undo something, commit the undo.
 
-## Never commit secrets
+## Don't commit secrets
 
-Secrets, API keys, `.env` files, model weights and local LLM files stay out
-of the repository. `.gitignore` covers them and `.env.example` documents
-which variables exist without their values.
+API keys, `.env` files, model weights — none of it goes in. `.gitignore`
+covers them. If you add a setting, put it in `.env.example` with a blank or
+a safe default, never a real value.
 
-If you add a new setting, add it to `.env.example` with a placeholder or a
-safe local default, never a real value.
+## Style
 
-## Code style
-
-- **Python**: `ruff` enforces the style. Run `ruff check .` and
-  `ruff format .` from `backend/`.
-- **TypeScript/React**: `oxlint` enforces the style. Run `npm run lint`
-  from `frontend/`.
-- Write tests with each ticket. A ticket is not done without them.
+Python is `ruff` (`ruff check .` and `ruff format .` from `backend/`).
+TypeScript is `oxlint` (`npm run lint` from `frontend/`). Write tests with
+the ticket — it isn't done without them.
 
 ## The contracts are fixed
 
-`docs/OnboardAI-Interface-Contracts.docx` defines the nine endpoints, their
-fields and the error formats. Do not invent endpoints or fields. If you need
-something the contracts do not define, raise it with the team rather than
-adding it.
+`docs/OnboardAI-Interface-Contracts.docx` defines our nine endpoints, their
+fields and their error formats. Don't invent endpoints or fields. If you need
+something it doesn't cover, raise it with the team first.
