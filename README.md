@@ -883,5 +883,5 @@ same pull request as the shortcut.
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for branch naming, commit message and
-pull request conventions. [CLAUDE.md](CLAUDE.md) holds the full working
-agreement, including the board rules.
+pull request conventions, and the Jira board for the working agreement and
+the board rules.

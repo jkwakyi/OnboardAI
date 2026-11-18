@@ -10,8 +10,8 @@ Two of the components the architecture diagram names:
   with the key on the server only.
 
 `mock.py` is the stand-in for CI and for teammates with no key, selected by
-`EMBEDDING_PROVIDER=mock` and never by accident - the same arrangement
-CLAUDE.md requires for the Mock LLM, for the same reason.
+`EMBEDDING_PROVIDER=mock` and never by accident - the same arrangement the
+Mock LLM has, for the same reason.
 
 Nothing above this package learns which provider it got. The Documents API
 asks for its sections to be embedded; the Retrieval Service (ON-43) asks

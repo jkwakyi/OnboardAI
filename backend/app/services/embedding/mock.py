@@ -2,9 +2,9 @@
 
 Why this exists
 ---------------
-CLAUDE.md fixes the rule for the LLM - "Keep the Mock LLM selectable by
+ON-18 fixes the rule for the LLM - keep the Mock LLM selectable by
 configuration so CI and teammates without the model can still run the
-system" - and the Embedding API needs it for exactly the same reason, only
+system - and the Embedding API needs it for exactly the same reason, only
 more so. The LLM is a local model somebody might happen to have; the
 Embedding API is a paid hosted service with one key, on one machine. Without
 a stand-in, CI cannot run the upload flow at all, Brad and Muhammed cannot

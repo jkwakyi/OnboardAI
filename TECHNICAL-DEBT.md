@@ -923,9 +923,9 @@ not a semantic one. "Annual leave" and "paid time off" mean the same thing
 and share no words, so the mock treats them as unrelated — which is the
 entire job a real embedding model does.
 
-**Why.** CLAUDE.md fixes the rule for the LLM: "Keep the Mock LLM
-selectable by configuration so CI and teammates without the model can still
-run the system." The Embedding API needs the same thing and needs it more.
+**Why.** ON-18 fixes the rule for the LLM: keep the Mock LLM selectable
+by configuration so CI and teammates without the model can still run the
+system. The Embedding API needs the same thing and needs it more.
 The LLM is a local model somebody might happen to have; the Embedding API
 is a paid hosted service with one key on one machine. Without a stand-in,
 CI cannot exercise the upload flow at all, Brad and Muhammed cannot run the
@@ -1092,7 +1092,7 @@ it; the Chat API writes neither.
 Interface Contracts' data table — "the question, the answer, the
 citations, whether it was a fallback". Adding `reason` and `best_score`
 means a migration and two columns the contracts do not name, and
-CLAUDE.md is explicit that the contracts are the source of truth and that
+the team agreed that the contracts are the source of truth and that
 inventing fields is not a decision this build gets to make on its own.
 Both are in the application log already, so nothing is lost permanently —
 only the ability to query it.
@@ -1165,8 +1165,8 @@ on a second device all start from an empty transcript. The answers still
 exist in `chat_logs`; nothing can read them back.
 
 **Why.** The Interface Contracts define exactly nine endpoints and none
-of them lists chat history. CLAUDE.md is explicit that inventing an
-endpoint is not a decision this build makes on its own, so the choice
+of them lists chat history. Inventing an endpoint is not a decision
+this build makes on its own, so the choice
 was between a tenth endpoint nobody agreed and a page that is honest
 about starting empty. The page is honest about it, including in the
 README.

@@ -110,7 +110,7 @@ The server says which mode it started in. Both write the same file, so the
 page does not care which one is in use.
 
 Administrative tickets and epics are left out of the counts, matching the
-board rules in `CLAUDE.md`.
+team's board rules: the percentage is development work, not paperwork.
 
 ## How it fits together
 
