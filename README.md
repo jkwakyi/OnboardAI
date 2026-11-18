@@ -82,16 +82,21 @@ copy .env.example .env
 cp .env.example .env
 ```
 
-Open `.env` in a text editor. Find these two lines and put any password you
-like after each one — these are the accounts you'll sign in with:
+Open `.env` in a text editor. Find these two lines, which are blank, and
+fill them in exactly like this:
 
 ```
-SEED_EMPLOYEE_PASSWORD=
-SEED_HR_PASSWORD=
+SEED_EMPLOYEE_PASSWORD=onboardai-employee
+SEED_HR_PASSWORD=onboardai-hr
 ```
 
-They're deliberately blank. A password committed to a repository is a
-password everybody shares, so you pick your own. The file never leaves your
+These are the two demo accounts you'll sign in with. They're throwaway
+logins for a demo application that runs only on your own computer — they
+guard nothing real, so everyone on the team uses the same ones.
+
+They're blank in the file you copied because that file *is* in the
+repository, and a real password committed to a repository is a password
+everybody has forever. Your `.env` is ignored by Git and never leaves your
 machine.
 
 ## Step 1 — Start the databases
@@ -136,12 +141,18 @@ Then, from the main project folder:
 python scripts/seed_accounts.py
 ```
 
-That creates two accounts using the passwords you chose:
+That creates the two demo accounts. **These are your sign-in details:**
 
-| Who | Email | Role |
-| --- | --- | --- |
-| Alex Rivera | `employee@onboardai.example` | Employee |
-| Jordan Blake | `hr@onboardai.example` | HR administrator |
+| Who | Email | Password | Role |
+| --- | --- | --- | --- |
+| Alex Rivera | `employee@onboardai.example` | `onboardai-employee` | Employee |
+| Jordan Blake | `hr@onboardai.example` | `onboardai-hr` | HR administrator |
+
+Both addresses end in `.example`, a domain reserved by the standards body
+precisely so test accounts can never reach a real mailbox.
+
+Run that script again any time to reset the accounts — handy if you forget
+a password or wipe the database.
 
 ## Step 4 — Start the backend
 
@@ -165,8 +176,10 @@ Leave that one running too.
 
 ## Step 6 — Open it
 
-Go to **<http://localhost:5173>** and sign in with one of the two accounts
-above.
+Go to **<http://localhost:5173>** and sign in:
+
+- **HR administrator** — `hr@onboardai.example` / `onboardai-hr`
+- **Employee** — `employee@onboardai.example` / `onboardai-employee`
 
 Sign in as Jordan Blake (HR) and you'll see a Documents page — upload the
 sample handbook from `data/handbook/pdf/` to give the assistant something to
@@ -189,6 +202,60 @@ cd frontend; npm run dev
 ```
 
 (On Mac, `source .venv/bin/activate` instead of the Windows activate line.)
+
+---
+
+# Using it
+
+## Uploading documents — as HR
+
+Sign in as **Jordan Blake**. The assistant starts out knowing nothing, so
+this is the first thing to do.
+
+Go to **Documents** and either drag a file onto the box or click it to
+browse. PDFs and plain text files are accepted; anything else is refused
+rather than quietly stored. Press **Upload**.
+
+The file is read on the way in — the server pulls out the text, splits it
+into sections by its headings, and indexes each one so it can be searched
+by meaning later. That takes a second or two per document. If a file has no
+readable text in it (a scanned page, say), it's rejected then and there
+rather than sitting in the system answering nothing.
+
+To get started, upload the sample handbook from `data/handbook/pdf/` — all
+eight chapters.
+
+> The page doesn't yet list what you've already uploaded, or let you delete
+> anything. That's still being built.
+
+## Asking a question — as an employee
+
+Sign in as **Alex Rivera** and go to **Chat**. Type a question the way
+you'd ask a person — "how much paid time off do I get?" — and press Enter.
+Shift+Enter gives you a new line instead of sending.
+
+The answer appears above the box, with one or more chips underneath it
+showing exactly which document and section it came from. That's the point:
+you never have to take the answer on trust, you can go and read the
+paragraph it was built from.
+
+Good questions to try against the sample handbook: *how much paid time off
+do I get?*, *how do I report a security incident?*, *when do I get paid?*,
+*what happens during my first week?*
+
+## When it can't answer
+
+Ask something the handbook doesn't cover and you'll get a **No answer
+found** label instead, with a short message pointing you at HR.
+
+This is deliberate and it's the most important behaviour in the system.
+Rather than guessing, it tells you it doesn't know. Underneath is a **Send
+to HR** button — press it and the question goes to a real person. The
+button is replaced by a confirmation, because "you can't do this again"
+and "this is done" are different things and should look different.
+
+> HR can't read those escalations in the app yet — they're stored, waiting
+> on the HR Inbox page, which is still being built.
 
 ---
 
