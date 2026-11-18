@@ -163,8 +163,21 @@ def _bounded(text: str, max_characters: int, path: Path) -> str:
 
 # --- splitting ---------------------------------------------------------
 
-# A numbered heading: "5.1 ELIGIBILITY AND ENROLMENT", "3 Scope", "2.4.1 Pay".
-NUMBERED_HEADING = re.compile(r"^\d+(?:\.\d+)*\.?\s+\S")
+# A numbered heading: "5.1 ELIGIBILITY AND ENROLMENT", "2.4.1 Pay".
+#
+# The dot is required, and that is the whole point of this pattern (ON-69).
+# It used to accept a bare number too - "3 Scope" - which also matched every
+# line of an ordinary numbered list. The handbook lists its eleven company
+# holidays as "1. New Year's Day", "4. Juneteenth" and so on, so each became
+# a heading with nothing under it, and a heading with no body was dropped.
+# Eleven holidays were stored nowhere, and an employee asking whether
+# Juneteenth is a holiday got nothing from a handbook that says it is.
+#
+# A document that really does use bare numbers for its headings now loses
+# those divisions and is split at paragraphs instead. That is the trade the
+# module's own rule points at: a missed heading merges two sections, which
+# is survivable, while a false one swallows the text beneath it.
+NUMBERED_HEADING = re.compile(r"^\d+(?:\.\d+)+\.?\s+\S")
 
 # A Markdown heading, for anybody who uploads notes rather than a handbook.
 MARKDOWN_HEADING = re.compile(r"^#{1,6}\s+\S")
@@ -222,6 +235,13 @@ def split_into_sections(
     for heading, body in blocks:
         body = body.strip()
         if not body:
+            # A heading with nothing under it. Dropping it threw the
+            # heading's own words away with it, which is how the handbook's
+            # holidays went missing (ON-69). Fold it into the section above
+            # so the text survives; if there is no section above, hold it
+            # for the next one.
+            if heading:
+                _carry_heading_text(pieces, heading)
             continue
         for part in _split_long_body(body, max_characters):
             pieces.append((heading, part))
@@ -279,6 +299,48 @@ def _split_long_body(body: str, max_characters: int) -> list[str]:
     return parts
 
 
+def _carry_heading_text(pieces: list[tuple[str | None, str]], heading: str) -> None:
+    """Keep the words of a heading that had no section under it.
+
+    Appended to the section above, because that is where a reader would
+    find it on the page. With nothing above it yet, it becomes a piece of
+    its own and the next merge will join it to what follows.
+    """
+    if pieces:
+        last_heading, last_body = pieces[-1]
+        pieces[-1] = (last_heading, f"{last_body}\n{heading}")
+    else:
+        pieces.append((None, heading))
+
+
+def _join(first: tuple[str | None, str], second: tuple[str | None, str]) -> tuple[str | None, str]:
+    """Join two pieces, keeping the heading of whichever brought more text.
+
+    Two sections joined used to keep the first one's heading whatever its
+    size, so a one-line crumb could put its title on the long section that
+    followed - and the citation then pointed at the wrong place (ON-69).
+    The longer piece is what the joined text is mostly about.
+
+    The heading that loses keeps its words: they go into the body at the
+    point they appeared in the document. Otherwise fixing a misleading
+    citation would quietly delete a line of the handbook, which is the
+    same failure in a different place.
+    """
+    first_heading, first_body = first
+    second_heading, second_body = second
+
+    if len(first_body) >= len(second_body):
+        kept = first_heading or second_heading
+        dropped = second_heading if second_heading and second_heading != kept else None
+        body = f"{first_body}\n\n{dropped}\n{second_body}" if dropped else None
+    else:
+        kept = second_heading or first_heading
+        dropped = first_heading if first_heading and first_heading != kept else None
+        body = f"{dropped}\n{first_body}\n\n{second_body}" if dropped else None
+
+    return kept, body if body is not None else f"{first_body}\n\n{second_body}"
+
+
 def _merge_crumbs(
     pieces: list[tuple[str | None, str]], min_characters: int, max_characters: int
 ) -> list[tuple[str | None, str]]:
@@ -295,9 +357,9 @@ def _merge_crumbs(
 
     for heading, body in pieces:
         if pending is not None:
-            joined = f"{pending[1]}\n\n{body}"
-            if len(joined) <= max_characters:
-                heading, body = pending[0] or heading, joined
+            joined_heading, joined_body = _join(pending, (heading, body))
+            if len(joined_body) <= max_characters:
+                heading, body = joined_heading, joined_body
             else:
                 merged.append(pending)
             pending = None
@@ -310,8 +372,7 @@ def _merge_crumbs(
         # Nothing followed it. Attach it to the previous section if that
         # leaves a section of a sensible size, or keep it as its own.
         if merged and len(merged[-1][1]) + len(pending[1]) <= max_characters:
-            last_heading, last_body = merged[-1]
-            merged[-1] = (last_heading, f"{last_body}\n\n{pending[1]}")
+            merged[-1] = _join(merged[-1], pending)
         else:
             merged.append(pending)
 
