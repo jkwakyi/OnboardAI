@@ -15,9 +15,8 @@ In process, so per worker
 -------------------------
 The count lives in this process's memory. Two uvicorn workers each allow
 the full number, and a restart forgets everything. That is honest for the
-alpha and recorded in TECHNICAL-DEBT.md; the shape of the fix is the same
-code against Redis, which is a change to ask about rather than to make
-quietly.
+alpha; the shape of the fix is the same code against Redis, which is a
+change to ask about rather than to make quietly.
 """
 
 from __future__ import annotations

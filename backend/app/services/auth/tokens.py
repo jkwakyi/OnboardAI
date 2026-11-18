@@ -18,9 +18,9 @@ that claim against a published standard instead of against this file.
 
 A stateless token cannot be revoked
 -----------------------------------
-That is the trade, and it is recorded in TECHNICAL-DEBT.md as TD-19. The
-mitigation for the alpha is a short life: a token is good for one working
-day and then its holder logs in again.
+That is the trade, accepted for the alpha. The mitigation is a short
+life: a token is good for one working day and then its holder logs in
+again.
 """
 
 from __future__ import annotations

@@ -42,3 +42,8 @@ Thumbs.db
 
 # Local dev server logs
 .dev-*.log
+
+# Internal development tooling and process notes. Kept locally, not shipped.
+TECHNICAL-DEBT.md
+tools/
+docs/alpha/

@@ -79,7 +79,7 @@ def _client_key(request: Request) -> str:
     Deliberately not X-Forwarded-For. Any caller can set that header, so
     trusting it would let an attacker hand themselves a fresh allowance on
     every request and turn the per-client limit into decoration. Behind a
-    proxy this is the proxy, which is recorded in TECHNICAL-DEBT.md.
+    proxy this is the proxy, which is a known limitation of the alpha.
     """
     return f"client:{request.client.host if request.client else 'unknown'}"
 
