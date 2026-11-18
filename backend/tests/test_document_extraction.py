@@ -18,6 +18,7 @@ import pytest
 from app.config import REPO_ROOT, Settings
 from app.services.documents.extraction import (
     MAX_HEADING_LENGTH,
+    RULE,
     SectionText,
     UnreadableDocument,
     clean_heading,
@@ -186,7 +187,6 @@ def test_reading_stops_at_the_wall_clock(tmp_path, monkeypatch):
     [
         "5.1 ELIGIBILITY AND ENROLMENT",
         "5.1 Eligibility and enrolment",
-        "3 Scope",
         "2.4.1 Pay dates",
         "# Holiday",
         "### Sick leave",
@@ -205,6 +205,14 @@ def test_a_heading_is_recognised(line):
         "   ",
         "Regular full-time employees are eligible for the benefits in this document.",
         "1. The company pays 80 per cent of the premium for employee-only cover.",
+        # A bare number is a list entry, not a heading (ON-69). This used to
+        # be accepted, which is how the handbook's eleven company holidays -
+        # "1. New Year's Day" through "11. One floating holiday" - each
+        # became a heading with no body and were dropped. A document that
+        # genuinely numbers its headings this way loses those divisions and
+        # is split at paragraphs instead, which is the safer way to be wrong.
+        "3 Scope",
+        "4. Juneteenth",
         "There are 30 days to enrol.",
         "Two medical plans are offered, a Standard plan and a High Deductible plan.",
         "x" * (MAX_HEADING_LENGTH + 1),
@@ -276,6 +284,95 @@ def test_every_section_of_every_handbook_document_is_usable():
         assert [s.position for s in sections] == list(range(len(sections)))
         for section in sections:
             assert section.text.strip(), f"{path.name} has an empty section"
+
+
+# --- nothing is lost on the way in (ON-69) -----------------------------
+
+
+def test_no_line_of_any_handbook_document_is_lost():
+    """The test that would have caught it.
+
+    The splitter used to treat any numbered line as a heading, so each of
+    the eleven entries in "4.4 COMPANY HOLIDAYS" became a heading with no
+    body - and a heading with no body was dropped. Juneteenth, Memorial
+    Day and nine others were stored nowhere, and the assistant could not
+    answer a question the handbook answers in plain sight.
+
+    Every other test here asked whether the sections looked reasonable.
+    None asked whether they still contained the document, which is the
+    one question that fails loudly when text goes missing.
+    """
+    for path in sorted((HANDBOOK / "txt").glob("*.txt")):
+        text = read(path, "txt")
+        sections = sections_of(text)
+
+        stored = "\n".join(section.text for section in sections)
+        headings = " | ".join(section.heading or "" for section in sections)
+
+        lost = [
+            line.strip()
+            for line in text.splitlines()
+            if line.strip()
+            and not RULE.match(line.strip())
+            and line.strip() not in stored
+            and line.strip() not in headings
+        ]
+        assert lost == [], f"{path.name} lost {len(lost)} line(s): {lost[:3]}"
+
+
+def test_the_company_holidays_are_all_retrievable():
+    """The finding itself, named. Eleven holidays, by name."""
+    sections = sections_of(read(HANDBOOK / "txt" / "04-time-off-and-leave.txt", "txt"))
+    stored = "\n".join(section.text for section in sections)
+
+    for holiday in ("New Year's Day", "Juneteenth", "Memorial Day", "Christmas Day"):
+        assert holiday in stored, f"{holiday} is in the handbook but not in any section"
+
+
+def test_a_numbered_list_entry_is_not_a_heading():
+    """ "4. Juneteenth" is a list entry. "4.4 COMPANY HOLIDAYS" is a heading.
+    The dot between the numbers is what tells them apart."""
+    assert looks_like_a_heading("4.4 COMPANY HOLIDAYS")
+    assert looks_like_a_heading("2.4.1 Pay")
+    assert not looks_like_a_heading("4. Juneteenth")
+    assert not looks_like_a_heading("11. One floating holiday, chosen by the employee")
+
+
+def test_a_heading_with_nothing_under_it_keeps_its_words():
+    """Dropping it threw the heading's own text away."""
+    sections = sections_of(
+        "1.1 FIRST\n\nSomething here that is long enough to stand on its own as a "
+        "section of the handbook and not be folded away.\n\n1.2 ORPHANED\n\n1.3 THIRD"
+        "\n\nMore text, also long enough to survive on its own without merging."
+    )
+
+    stored = "\n".join(section.text for section in sections)
+    assert "1.2 ORPHANED" in stored or any(s.heading == "1.2 ORPHANED" for s in sections)
+
+
+def test_joining_two_sections_keeps_the_longer_one_s_heading():
+    """A one-line crumb used to put its title on the long section that
+    followed, so the citation pointed at the wrong place."""
+    sections = sections_of(
+        "9.1 CRUMB\n\nShort.\n\n9.2 THE REAL SECTION\n\n"
+        + "This is the substantial part of the document and it is what the "
+        "joined section is actually about. " * 4
+    )
+
+    carrying_the_text = next(s for s in sections if "substantial part" in s.text)
+    assert carrying_the_text.heading == "9.2 THE REAL SECTION"
+
+
+def test_the_heading_that_loses_a_join_still_keeps_its_words():
+    """Fixing a misleading citation must not delete a line of the handbook."""
+    sections = sections_of(
+        "9.1 CRUMB\n\nShort.\n\n9.2 THE REAL SECTION\n\n"
+        + "This is the substantial part of the document and it is what the "
+        "joined section is actually about. " * 4
+    )
+
+    stored = "\n".join(section.text for section in sections)
+    assert "9.1 CRUMB" in stored
 
 
 # --- the shape of the split --------------------------------------------
