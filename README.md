@@ -373,5 +373,9 @@ data/handbook/  the sample company handbook
 docs/           architecture diagram and interface contracts
 ```
 
+**Known limitations.** [TECHNICAL-DEBT.md](TECHNICAL-DEBT.md) lists every
+shortcut taken to reach the alpha — what it is, why it was taken, what it
+costs and how it gets fixed. Thirty-seven entries.
+
 **Contributing.** See [CONTRIBUTING.md](CONTRIBUTING.md) for branch naming,
 commit messages and pull request conventions.
