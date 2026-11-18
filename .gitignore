@@ -47,3 +47,4 @@ Thumbs.db
 TECHNICAL-DEBT.md
 tools/
 docs/alpha/
+backend/tests/test_technical_debt_log.py
